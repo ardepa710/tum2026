@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Building2,
   Users,
+  UsersRound,
   Settings,
   LogOut,
   Shield,
@@ -16,6 +17,7 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/tenants", label: "Tenants", icon: Building2 },
   { href: "/dashboard/users", label: "Users", icon: Users },
+  { href: "/dashboard/groups", label: "Groups", icon: UsersRound },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
