@@ -6,6 +6,7 @@ import {
   Building2,
   Hash,
   KeyRound,
+  Globe,
   Loader2,
 } from "lucide-react";
 
@@ -15,6 +16,7 @@ type TenantData = {
   tenantAbbrv: string;
   tenantIdRewst: string;
   tenantIdMsft: string;
+  domainUrl: string | null;
 } | null;
 
 export function TenantForm({ tenant }: { tenant?: TenantData }) {
@@ -73,6 +75,25 @@ export function TenantForm({ tenant }: { tenant?: TenantData }) {
           required
           defaultValue={tenant?.tenantAbbrv ?? ""}
           placeholder="e.g. CNTS"
+          className={inputClass}
+        />
+      </div>
+
+      {/* Domain URL */}
+      <div>
+        <label
+          htmlFor="domainUrl"
+          className="flex items-center gap-2 text-sm font-medium text-[var(--text-primary)] mb-2"
+        >
+          <Globe className="w-4 h-4 text-[var(--text-muted)]" />
+          Domain URL
+        </label>
+        <input
+          id="domainUrl"
+          name="domainUrl"
+          type="url"
+          defaultValue={tenant?.domainUrl ?? ""}
+          placeholder="e.g. https://contoso.com"
           className={inputClass}
         />
       </div>

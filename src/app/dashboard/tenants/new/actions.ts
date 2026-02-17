@@ -17,6 +17,7 @@ export async function createTenant(
   const tenantAbbrv = (formData.get("tenantAbbrv") as string)?.trim();
   const tenantIdRewst = (formData.get("tenantIdRewst") as string)?.trim();
   const tenantIdMsft = (formData.get("tenantIdMsft") as string)?.trim();
+  const domainUrl = (formData.get("domainUrl") as string)?.trim() || null;
 
   if (!tenantName) return { error: "Tenant Name is required." };
   if (!tenantAbbrv) return { error: "Tenant Abbreviation is required." };
@@ -30,6 +31,7 @@ export async function createTenant(
         tenantAbbrv,
         tenantIdRewst,
         tenantIdMsft,
+        domainUrl,
         regUser: session.user.email,
       },
     });
@@ -49,6 +51,7 @@ export async function updateTenant(
   const tenantAbbrv = (formData.get("tenantAbbrv") as string)?.trim();
   const tenantIdRewst = (formData.get("tenantIdRewst") as string)?.trim();
   const tenantIdMsft = (formData.get("tenantIdMsft") as string)?.trim();
+  const domainUrl = (formData.get("domainUrl") as string)?.trim() || null;
 
   if (!tenantName) return { error: "Tenant Name is required." };
   if (!tenantAbbrv) return { error: "Tenant Abbreviation is required." };
@@ -58,7 +61,7 @@ export async function updateTenant(
   try {
     await prisma.tenant.update({
       where: { id },
-      data: { tenantName, tenantAbbrv, tenantIdRewst, tenantIdMsft },
+      data: { tenantName, tenantAbbrv, tenantIdRewst, tenantIdMsft, domainUrl },
     });
   } catch {
     return { error: "Failed to update tenant. Please try again." };

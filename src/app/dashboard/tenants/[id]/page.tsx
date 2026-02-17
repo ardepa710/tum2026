@@ -4,6 +4,7 @@ import {
   Building2,
   Hash,
   KeyRound,
+  Globe,
   ListTodo,
   Calendar,
   User,
@@ -54,6 +55,19 @@ export default async function TenantDetailPage({
                 {tenant.tenantAbbrv}
               </span>
             </div>
+            {tenant.domainUrl && (
+              <div className="flex items-center gap-1.5 mt-1">
+                <Globe className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+                <a
+                  href={tenant.domainUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-[var(--accent)] hover:underline"
+                >
+                  {tenant.domainUrl}
+                </a>
+              </div>
+            )}
           </div>
         </div>
       </div>

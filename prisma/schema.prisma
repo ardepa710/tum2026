@@ -78,6 +78,7 @@ model Tenant {
   tenantAbbrv     String           @map("tenant_abbrv")
   tenantIdRewst   String           @map("tenantid_rewst")
   tenantIdMsft    String           @map("tenantid_msft")
+  domainUrl       String?          @map("domain_url")
   regDttm         DateTime         @default(now()) @map("reg_dttm")
   regUser         String           @map("reg_user")
   automationTasks AutomationTask[]

@@ -6,6 +6,7 @@ import {
   Hash,
   ListTodo,
   KeyRound,
+  Globe,
   Calendar,
 } from "lucide-react";
 
@@ -90,6 +91,16 @@ export default async function TenantsPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Domain */}
+              {tenant.domainUrl && (
+                <div className="flex items-center gap-2 mb-3">
+                  <Globe className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+                  <span className="text-xs text-[var(--accent)] truncate">
+                    {tenant.domainUrl}
+                  </span>
+                </div>
+              )}
 
               {/* IDs */}
               <div className="space-y-2 mb-3">
