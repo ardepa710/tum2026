@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Microsoft Graph API external images if needed
+  allowedDevOrigins: ["https://192.168.1.48:3000"],
   images: {
     remotePatterns: [
       {

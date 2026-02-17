@@ -1,7 +1,17 @@
-import { signIn } from "@/lib/auth";
+"use client";
+
+import { signIn } from "next-auth/react";
 import { Shield } from "lucide-react";
+import { useState } from "react";
 
 export default function LoginPage() {
+  const [loading, setLoading] = useState(false);
+
+  const handleSignIn = async () => {
+    setLoading(true);
+    await signIn("microsoft-entra-id", { callbackUrl: "/dashboard" });
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-[var(--bg-primary)]">
       <div className="w-full max-w-sm">
@@ -25,25 +35,23 @@ export default function LoginPage() {
             Use your Microsoft corporate account to access the dashboard.
           </p>
 
-          <form
-            action={async () => {
-              "use server";
-              await signIn("microsoft-entra-id", { redirectTo: "/dashboard" });
-            }}
+          <button
+            onClick={handleSignIn}
+            disabled={loading}
+            className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-medium rounded-lg transition-colors disabled:opacity-50"
           >
-            <button
-              type="submit"
-              className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-medium rounded-lg transition-colors"
-            >
+            {loading ? (
+              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
               <svg className="w-5 h-5" viewBox="0 0 21 21" fill="none">
                 <rect x="1" y="1" width="9" height="9" fill="#f25022" />
                 <rect x="11" y="1" width="9" height="9" fill="#7fba00" />
                 <rect x="1" y="11" width="9" height="9" fill="#00a4ef" />
                 <rect x="11" y="11" width="9" height="9" fill="#ffb900" />
               </svg>
-              Sign in with Microsoft
-            </button>
-          </form>
+            )}
+            {loading ? "Redirecting..." : "Sign in with Microsoft"}
+          </button>
         </div>
 
         <p className="text-center text-xs text-[var(--text-muted)] mt-6">
