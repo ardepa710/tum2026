@@ -97,3 +97,118 @@ export async function getLicenses(tenantId: number) {
 
   return response.value;
 }
+
+// --- User Detail Functions ---
+
+export async function getUserDetail(tenantId: number, userId: string) {
+  const client = await getGraphClient(tenantId);
+  if (!client) return null;
+
+  const response = await client
+    .api(`/users/${userId}`)
+    .select(
+      "id,displayName,mail,userPrincipalName,accountEnabled,jobTitle," +
+      "department,companyName,officeLocation,mobilePhone,businessPhones," +
+      "createdDateTime,lastPasswordChangeDateTime,signInActivity"
+    )
+    .get();
+
+  return response;
+}
+
+export async function getUserMemberOf(tenantId: number, userId: string) {
+  const client = await getGraphClient(tenantId);
+  if (!client) return [];
+
+  const response = await client
+    .api(`/users/${userId}/memberOf`)
+    .select("id,displayName,description,groupTypes")
+    .top(999)
+    .get();
+
+  return response.value;
+}
+
+export async function getUserLicenseDetails(tenantId: number, userId: string) {
+  const client = await getGraphClient(tenantId);
+  if (!client) return [];
+
+  const response = await client
+    .api(`/users/${userId}/licenseDetails`)
+    .get();
+
+  return response.value;
+}
+
+export async function getUserMailboxSettings(tenantId: number, userId: string) {
+  const client = await getGraphClient(tenantId);
+  if (!client) return null;
+
+  try {
+    const response = await client
+      .api(`/users/${userId}/mailboxSettings`)
+      .get();
+    return response;
+  } catch {
+    return null;
+  }
+}
+
+export async function getUserManager(tenantId: number, userId: string) {
+  const client = await getGraphClient(tenantId);
+  if (!client) return null;
+
+  try {
+    const response = await client
+      .api(`/users/${userId}/manager`)
+      .select("id,displayName,jobTitle,mail,mobilePhone")
+      .get();
+    return response;
+  } catch {
+    return null;
+  }
+}
+
+// --- Group Detail Functions ---
+
+export async function getGroupDetail(tenantId: number, groupId: string) {
+  const client = await getGraphClient(tenantId);
+  if (!client) return null;
+
+  const response = await client
+    .api(`/groups/${groupId}`)
+    .select(
+      "id,displayName,description,mail,mailNickname,mailEnabled,securityEnabled," +
+      "groupTypes,membershipRule,membershipRuleProcessingState,visibility," +
+      "createdDateTime,renewedDateTime,expirationDateTime,proxyAddresses"
+    )
+    .get();
+
+  return response;
+}
+
+export async function getGroupMembers(tenantId: number, groupId: string) {
+  const client = await getGraphClient(tenantId);
+  if (!client) return [];
+
+  const response = await client
+    .api(`/groups/${groupId}/members`)
+    .select("id,displayName,mail,userPrincipalName,accountEnabled,jobTitle")
+    .top(999)
+    .get();
+
+  return response.value;
+}
+
+export async function getGroupOwners(tenantId: number, groupId: string) {
+  const client = await getGraphClient(tenantId);
+  if (!client) return [];
+
+  const response = await client
+    .api(`/groups/${groupId}/owners`)
+    .select("id,displayName,mail,userPrincipalName")
+    .top(999)
+    .get();
+
+  return response.value;
+}

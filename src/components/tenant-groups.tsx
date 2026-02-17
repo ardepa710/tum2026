@@ -11,6 +11,7 @@ import {
   Mail,
   Tag,
 } from "lucide-react";
+import { GroupDetailPanel } from "@/components/group-detail-panel";
 
 type ADGroup = {
   id: string;
@@ -33,6 +34,10 @@ export function TenantGroups({ tenants }: { tenants: TenantOption[] }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
+  const [selectedGroup, setSelectedGroup] = useState<{
+    id: string;
+    displayName: string;
+  } | null>(null);
   const fetchIdRef = useRef(0);
 
   const handleTenantChange = useCallback(async (tenantId: string) => {
@@ -219,7 +224,13 @@ export function TenantGroups({ tenants }: { tenants: TenantOption[] }) {
                   {filteredGroups.map((group) => (
                     <tr
                       key={group.id}
-                      className="hover:bg-[var(--bg-hover)] transition-colors"
+                      onClick={() =>
+                        setSelectedGroup({
+                          id: group.id,
+                          displayName: group.displayName,
+                        })
+                      }
+                      className="hover:bg-[var(--bg-hover)] transition-colors cursor-pointer"
                     >
                       <td className="px-5 py-3">
                         <span className="text-sm font-medium text-[var(--text-primary)]">
@@ -269,6 +280,15 @@ export function TenantGroups({ tenants }: { tenants: TenantOption[] }) {
             </div>
           </div>
         </>
+      )}
+      {/* Group Detail Panel */}
+      {selectedGroup && selectedTenantId && (
+        <GroupDetailPanel
+          tenantId={selectedTenantId}
+          groupId={selectedGroup.id}
+          groupName={selectedGroup.displayName}
+          onClose={() => setSelectedGroup(null)}
+        />
       )}
     </div>
   );

@@ -11,6 +11,7 @@ import {
   Building2,
   Search,
 } from "lucide-react";
+import { UserDetailPanel } from "@/components/user-detail-panel";
 
 type ADUser = {
   id: string;
@@ -34,6 +35,10 @@ export function TenantUsers({ tenants }: { tenants: TenantOption[] }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
+  const [selectedUser, setSelectedUser] = useState<{
+    id: string;
+    displayName: string;
+  } | null>(null);
   const fetchIdRef = useRef(0);
 
   const handleTenantChange = useCallback(async (tenantId: string) => {
@@ -224,7 +229,13 @@ export function TenantUsers({ tenants }: { tenants: TenantOption[] }) {
                   {filteredUsers.map((user) => (
                     <tr
                       key={user.id}
-                      className="hover:bg-[var(--bg-hover)] transition-colors"
+                      onClick={() =>
+                        setSelectedUser({
+                          id: user.id,
+                          displayName: user.displayName,
+                        })
+                      }
+                      className="hover:bg-[var(--bg-hover)] transition-colors cursor-pointer"
                     >
                       <td className="px-5 py-3">
                         <span className="text-sm font-medium text-[var(--text-primary)]">
@@ -266,6 +277,15 @@ export function TenantUsers({ tenants }: { tenants: TenantOption[] }) {
             </div>
           </div>
         </>
+      )}
+      {/* User Detail Panel */}
+      {selectedUser && selectedTenantId && (
+        <UserDetailPanel
+          tenantId={selectedTenantId}
+          userId={selectedUser.id}
+          userName={selectedUser.displayName}
+          onClose={() => setSelectedUser(null)}
+        />
       )}
     </div>
   );
