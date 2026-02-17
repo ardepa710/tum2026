@@ -3,11 +3,10 @@ import { prisma } from "@/lib/prisma";
 import {
   Building2,
   Plus,
-  Globe,
-  CheckCircle2,
-  XCircle,
+  Hash,
   ListTodo,
   KeyRound,
+  Calendar,
 } from "lucide-react";
 
 export default async function TenantsPage() {
@@ -17,7 +16,7 @@ export default async function TenantsPage() {
         select: { automationTasks: true },
       },
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: { regDttm: "desc" },
   });
 
   return (
@@ -29,7 +28,7 @@ export default async function TenantsPage() {
             Tenants
           </h2>
           <p className="text-sm text-[var(--text-secondary)] mt-1">
-            {tenants.length} tenant{tenants.length !== 1 ? "s" : ""} configured
+            {tenants.length} tenant{tenants.length !== 1 ? "s" : ""} registered
           </p>
         </div>
         <Link
@@ -51,9 +50,7 @@ export default async function TenantsPage() {
             No tenants yet
           </h3>
           <p className="text-sm text-[var(--text-muted)] mb-6 max-w-md mx-auto">
-            Get started by adding your first Microsoft 365 tenant. You can
-            configure Azure AD credentials to manage users, groups, and
-            licenses.
+            Get started by adding your first tenant.
           </p>
           <Link
             href="/dashboard/tenants/new"
@@ -72,7 +69,7 @@ export default async function TenantsPage() {
               className="group bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-5 hover:border-[var(--accent)] transition-all hover:shadow-lg hover:shadow-[var(--accent)]/5"
             >
               {/* Card Header */}
-              <div className="flex items-start justify-between mb-4">
+              <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-[var(--accent)]/10 rounded-lg flex items-center justify-center">
                     <Building2
@@ -82,52 +79,52 @@ export default async function TenantsPage() {
                   </div>
                   <div>
                     <h3 className="text-sm font-semibold text-[var(--text-primary)] group-hover:text-[var(--accent)] transition-colors">
-                      {tenant.name}
+                      {tenant.tenantName}
                     </h3>
-                    {tenant.domain && (
-                      <div className="flex items-center gap-1 mt-0.5">
-                        <Globe className="w-3 h-3 text-[var(--text-muted)]" />
-                        <span className="text-xs text-[var(--text-muted)]">
-                          {tenant.domain}
-                        </span>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <Hash className="w-3 h-3 text-[var(--text-muted)]" />
+                      <span className="text-xs text-[var(--text-muted)] font-mono">
+                        {tenant.tenantAbbrv}
+                      </span>
+                    </div>
                   </div>
                 </div>
-                {/* Status Badge */}
-                {tenant.isActive ? (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-[var(--success)]/10 text-[var(--success)]">
-                    <CheckCircle2 className="w-3 h-3" />
-                    Active
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-[var(--error)]/10 text-[var(--error)]">
-                    <XCircle className="w-3 h-3" />
-                    Inactive
-                  </span>
-                )}
               </div>
 
-              {/* Azure Tenant ID */}
-              <div className="mb-4">
+              {/* IDs */}
+              <div className="space-y-2 mb-3">
                 <div className="flex items-center gap-2">
                   <KeyRound className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-                  <span className="text-xs text-[var(--text-muted)]">
-                    Azure Tenant ID
+                  <span className="text-xs text-[var(--text-muted)]">MSFT:</span>
+                  <span className="text-xs text-[var(--text-secondary)] font-mono truncate">
+                    {tenant.tenantIdMsft}
                   </span>
                 </div>
-                <p className="text-xs text-[var(--text-secondary)] mt-0.5 font-mono truncate">
-                  {tenant.azureTenantId || "Not configured"}
-                </p>
+                <div className="flex items-center gap-2">
+                  <KeyRound className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+                  <span className="text-xs text-[var(--text-muted)]">Rewst:</span>
+                  <span className="text-xs text-[var(--text-secondary)] font-mono truncate">
+                    {tenant.tenantIdRewst}
+                  </span>
+                </div>
               </div>
 
               {/* Footer */}
-              <div className="pt-3 border-t border-[var(--border)]">
+              <div className="pt-3 border-t border-[var(--border)] flex items-center justify-between">
                 <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
                   <ListTodo className="w-3.5 h-3.5" />
                   <span>
-                    {tenant._count.automationTasks} automation task
-                    {tenant._count.automationTasks !== 1 ? "s" : ""}
+                    {tenant._count.automationTasks} task{tenant._count.automationTasks !== 1 ? "s" : ""}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+                  <Calendar className="w-3.5 h-3.5" />
+                  <span>
+                    {tenant.regDttm.toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
                   </span>
                 </div>
               </div>

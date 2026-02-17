@@ -2,13 +2,11 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import {
   Building2,
-  Globe,
-  Shield,
-  CheckCircle2,
-  XCircle,
+  Hash,
   KeyRound,
   ListTodo,
   Calendar,
+  User,
 } from "lucide-react";
 
 export default async function TenantDetailPage({
@@ -17,9 +15,11 @@ export default async function TenantDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const tenantId = Number(id);
+  if (isNaN(tenantId)) notFound();
 
   const tenant = await prisma.tenant.findUnique({
-    where: { id },
+    where: { id: tenantId },
     include: {
       automationTasks: {
         orderBy: { createdAt: "desc" },
@@ -27,21 +27,12 @@ export default async function TenantDetailPage({
     },
   });
 
-  if (!tenant) {
-    notFound();
-  }
-
-  const hasAzureConfig =
-    tenant.azureTenantId && tenant.azureClientId && tenant.azureClientSecret;
+  if (!tenant) notFound();
 
   const taskCounts = {
     total: tenant.automationTasks.length,
-    pending: tenant.automationTasks.filter((t) => t.status === "PENDING")
-      .length,
-    running: tenant.automationTasks.filter((t) => t.status === "RUNNING")
-      .length,
-    completed: tenant.automationTasks.filter((t) => t.status === "COMPLETED")
-      .length,
+    pending: tenant.automationTasks.filter((t) => t.status === "PENDING").length,
+    completed: tenant.automationTasks.filter((t) => t.status === "COMPLETED").length,
     failed: tenant.automationTasks.filter((t) => t.status === "FAILED").length,
   };
 
@@ -55,88 +46,52 @@ export default async function TenantDetailPage({
           </div>
           <div>
             <h2 className="text-2xl font-bold text-[var(--text-primary)]">
-              {tenant.name}
+              {tenant.tenantName}
             </h2>
-            {tenant.domain && (
-              <div className="flex items-center gap-1.5 mt-1">
-                <Globe className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-                <span className="text-sm text-[var(--text-secondary)]">
-                  {tenant.domain}
-                </span>
-              </div>
-            )}
+            <div className="flex items-center gap-1.5 mt-1">
+              <Hash className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+              <span className="text-sm text-[var(--text-secondary)] font-mono">
+                {tenant.tenantAbbrv}
+              </span>
+            </div>
           </div>
         </div>
-        {tenant.isActive ? (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[var(--success)]/10 text-[var(--success)]">
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            Active
-          </span>
-        ) : (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[var(--error)]/10 text-[var(--error)]">
-            <XCircle className="w-3.5 h-3.5" />
-            Inactive
-          </span>
-        )}
       </div>
 
       {/* Info Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-        {/* Azure Config Card */}
+        {/* Platform IDs Card */}
         <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-5">
           <div className="flex items-center gap-2 mb-4">
-            <Shield
-              className="w-5 h-5"
-              style={{
-                color: hasAzureConfig ? "var(--success)" : "var(--warning)",
-              }}
-            />
+            <KeyRound className="w-5 h-5" style={{ color: "var(--accent)" }} />
             <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-              Azure Configuration
+              Platform IDs
             </h3>
           </div>
           <div className="space-y-3">
             <div>
               <span className="text-xs text-[var(--text-muted)]">
-                Tenant ID
+                Microsoft Tenant ID
               </span>
               <p className="text-sm text-[var(--text-secondary)] font-mono truncate">
-                {tenant.azureTenantId || "Not configured"}
+                {tenant.tenantIdMsft}
               </p>
             </div>
             <div>
               <span className="text-xs text-[var(--text-muted)]">
-                Client ID
+                Rewst Tenant ID
               </span>
               <p className="text-sm text-[var(--text-secondary)] font-mono truncate">
-                {tenant.azureClientId || "Not configured"}
-              </p>
-            </div>
-            <div>
-              <span className="text-xs text-[var(--text-muted)]">
-                Client Secret
-              </span>
-              <p className="text-sm text-[var(--text-secondary)]">
-                {tenant.azureClientSecret ? "********" : "Not configured"}
+                {tenant.tenantIdRewst}
               </p>
             </div>
           </div>
-          {!hasAzureConfig && (
-            <div className="mt-4 pt-3 border-t border-[var(--border)]">
-              <p className="text-xs text-[var(--warning)]">
-                Configure Azure credentials to enable AD management features.
-              </p>
-            </div>
-          )}
         </div>
 
         {/* Task Summary Card */}
         <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-5">
           <div className="flex items-center gap-2 mb-4">
-            <ListTodo
-              className="w-5 h-5"
-              style={{ color: "var(--accent)" }}
-            />
+            <ListTodo className="w-5 h-5" style={{ color: "var(--accent)" }} />
             <h3 className="text-sm font-semibold text-[var(--text-primary)]">
               Automation Tasks
             </h3>
@@ -155,9 +110,7 @@ export default async function TenantDetailPage({
               </p>
             </div>
             <div>
-              <span className="text-xs text-[var(--text-muted)]">
-                Completed
-              </span>
+              <span className="text-xs text-[var(--text-muted)]">Completed</span>
               <p className="text-xl font-bold text-[var(--success)]">
                 {taskCounts.completed}
               </p>
@@ -171,74 +124,50 @@ export default async function TenantDetailPage({
           </div>
         </div>
 
-        {/* Metadata Card */}
+        {/* Registration Card */}
         <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-5">
           <div className="flex items-center gap-2 mb-4">
-            <Calendar
-              className="w-5 h-5"
-              style={{ color: "var(--text-muted)" }}
-            />
+            <Calendar className="w-5 h-5" style={{ color: "var(--text-muted)" }} />
             <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-              Details
+              Registration
             </h3>
           </div>
           <div className="space-y-3">
             <div>
               <span className="text-xs text-[var(--text-muted)]">
-                Tenant ID
+                Registered
               </span>
-              <p className="text-sm text-[var(--text-secondary)] font-mono truncate">
-                {tenant.id}
-              </p>
-            </div>
-            <div>
-              <span className="text-xs text-[var(--text-muted)]">Created</span>
               <p className="text-sm text-[var(--text-secondary)]">
-                {tenant.createdAt.toLocaleDateString("en-US", {
+                {tenant.regDttm.toLocaleDateString("en-US", {
                   year: "numeric",
                   month: "long",
                   day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
                 })}
               </p>
             </div>
             <div>
               <span className="text-xs text-[var(--text-muted)]">
-                Last Updated
+                Registered By
               </span>
-              <p className="text-sm text-[var(--text-secondary)]">
-                {tenant.updatedAt.toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <User className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+                <p className="text-sm text-[var(--text-secondary)]">
+                  {tenant.regUser}
+                </p>
+              </div>
+            </div>
+            <div>
+              <span className="text-xs text-[var(--text-muted)]">
+                Internal ID
+              </span>
+              <p className="text-sm text-[var(--text-secondary)] font-mono">
+                {tenant.id}
               </p>
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Graph API Status */}
-      <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-5">
-        <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-3">
-          Microsoft Graph API
-        </h3>
-        {hasAzureConfig ? (
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-[var(--success)]" />
-            <span className="text-sm text-[var(--text-secondary)]">
-              Configured. Use the tabs above to browse users, groups, and
-              licenses.
-            </span>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-[var(--warning)]" />
-            <span className="text-sm text-[var(--text-secondary)]">
-              Not configured. Add Azure AD credentials (Tenant ID, Client ID,
-              and Client Secret) to enable Graph API features.
-            </span>
-          </div>
-        )}
       </div>
     </div>
   );

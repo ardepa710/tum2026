@@ -1,27 +1,37 @@
 "use client";
 
 import { useActionState } from "react";
-import { createTenant } from "@/app/dashboard/tenants/new/actions";
+import { createTenant, updateTenant } from "@/app/dashboard/tenants/new/actions";
 import {
   Building2,
-  Globe,
+  Hash,
   KeyRound,
-  Shield,
-  Eye,
-  EyeOff,
   Loader2,
 } from "lucide-react";
-import { useState } from "react";
 
-export function TenantForm() {
-  const [state, formAction, isPending] = useActionState(createTenant, {
-    error: null,
+type TenantData = {
+  id: number;
+  tenantName: string;
+  tenantAbbrv: string;
+  tenantIdRewst: string;
+  tenantIdMsft: string;
+} | null;
+
+export function TenantForm({ tenant }: { tenant?: TenantData }) {
+  const isEdit = !!tenant;
+  const action = isEdit ? updateTenant : createTenant;
+  const [state, formAction, isPending] = useActionState(action, {
+    error: "",
   });
-  const [showSecret, setShowSecret] = useState(false);
+
+  const inputClass =
+    "w-full px-4 py-2.5 bg-[var(--bg-primary)] border border-[var(--border)] rounded-lg text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)] transition-colors";
 
   return (
-    <form action={formAction} className="space-y-6">
-      {state.error && (
+    <form action={formAction} className="space-y-5">
+      {isEdit && <input type="hidden" name="id" value={tenant.id} />}
+
+      {state.error !== "" && (
         <div className="bg-[var(--error)]/10 border border-[var(--error)]/20 rounded-lg p-4">
           <p className="text-sm text-[var(--error)]">{state.error}</p>
         </div>
@@ -30,116 +40,91 @@ export function TenantForm() {
       {/* Tenant Name */}
       <div>
         <label
-          htmlFor="name"
+          htmlFor="tenantName"
           className="flex items-center gap-2 text-sm font-medium text-[var(--text-primary)] mb-2"
         >
           <Building2 className="w-4 h-4 text-[var(--text-muted)]" />
           Tenant Name <span className="text-[var(--error)]">*</span>
         </label>
         <input
-          id="name"
-          name="name"
+          id="tenantName"
+          name="tenantName"
           type="text"
           required
+          defaultValue={tenant?.tenantName ?? ""}
           placeholder="e.g. Contoso Ltd"
-          className="w-full px-4 py-2.5 bg-[var(--bg-primary)] border border-[var(--border)] rounded-lg text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)] transition-colors"
+          className={inputClass}
         />
       </div>
 
-      {/* Domain */}
+      {/* Tenant Abbreviation */}
       <div>
         <label
-          htmlFor="domain"
+          htmlFor="tenantAbbrv"
           className="flex items-center gap-2 text-sm font-medium text-[var(--text-primary)] mb-2"
         >
-          <Globe className="w-4 h-4 text-[var(--text-muted)]" />
-          Domain
+          <Hash className="w-4 h-4 text-[var(--text-muted)]" />
+          Abbreviation <span className="text-[var(--error)]">*</span>
         </label>
         <input
-          id="domain"
-          name="domain"
+          id="tenantAbbrv"
+          name="tenantAbbrv"
           type="text"
-          placeholder="e.g. contoso.onmicrosoft.com"
-          className="w-full px-4 py-2.5 bg-[var(--bg-primary)] border border-[var(--border)] rounded-lg text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)] transition-colors"
+          required
+          defaultValue={tenant?.tenantAbbrv ?? ""}
+          placeholder="e.g. CNTS"
+          className={inputClass}
         />
       </div>
 
       {/* Divider */}
-      <div className="border-t border-[var(--border)] pt-6">
+      <div className="border-t border-[var(--border)] pt-5">
         <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-1">
-          Azure AD Configuration
+          Platform IDs
         </h3>
         <p className="text-xs text-[var(--text-muted)] mb-4">
-          Optional. Configure these to enable user, group, and license
-          management via Microsoft Graph API.
+          Required identifiers for Rewst and Microsoft integrations.
         </p>
       </div>
 
-      {/* Azure Tenant ID */}
+      {/* Rewst Tenant ID */}
       <div>
         <label
-          htmlFor="azureTenantId"
+          htmlFor="tenantIdRewst"
           className="flex items-center gap-2 text-sm font-medium text-[var(--text-primary)] mb-2"
         >
           <KeyRound className="w-4 h-4 text-[var(--text-muted)]" />
-          Azure Tenant ID
+          Rewst Tenant ID <span className="text-[var(--error)]">*</span>
         </label>
         <input
-          id="azureTenantId"
-          name="azureTenantId"
+          id="tenantIdRewst"
+          name="tenantIdRewst"
           type="text"
+          required
+          defaultValue={tenant?.tenantIdRewst ?? ""}
           placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-          className="w-full px-4 py-2.5 bg-[var(--bg-primary)] border border-[var(--border)] rounded-lg text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)] transition-colors font-mono"
+          className={`${inputClass} font-mono`}
         />
       </div>
 
-      {/* Azure Client ID */}
+      {/* Microsoft Tenant ID */}
       <div>
         <label
-          htmlFor="azureClientId"
-          className="flex items-center gap-2 text-sm font-medium text-[var(--text-primary)] mb-2"
-        >
-          <Shield className="w-4 h-4 text-[var(--text-muted)]" />
-          Azure Client ID
-        </label>
-        <input
-          id="azureClientId"
-          name="azureClientId"
-          type="text"
-          placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-          className="w-full px-4 py-2.5 bg-[var(--bg-primary)] border border-[var(--border)] rounded-lg text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)] transition-colors font-mono"
-        />
-      </div>
-
-      {/* Azure Client Secret */}
-      <div>
-        <label
-          htmlFor="azureClientSecret"
+          htmlFor="tenantIdMsft"
           className="flex items-center gap-2 text-sm font-medium text-[var(--text-primary)] mb-2"
         >
           <KeyRound className="w-4 h-4 text-[var(--text-muted)]" />
-          Azure Client Secret
+          Microsoft Tenant ID <span className="text-[var(--error)]">*</span>
         </label>
-        <div className="relative">
-          <input
-            id="azureClientSecret"
-            name="azureClientSecret"
-            type={showSecret ? "text" : "password"}
-            placeholder="Client secret value"
-            className="w-full px-4 py-2.5 pr-12 bg-[var(--bg-primary)] border border-[var(--border)] rounded-lg text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)] transition-colors font-mono"
-          />
-          <button
-            type="button"
-            onClick={() => setShowSecret(!showSecret)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
-          >
-            {showSecret ? (
-              <EyeOff className="w-4 h-4" />
-            ) : (
-              <Eye className="w-4 h-4" />
-            )}
-          </button>
-        </div>
+        <input
+          id="tenantIdMsft"
+          name="tenantIdMsft"
+          type="text"
+          required
+          defaultValue={tenant?.tenantIdMsft ?? ""}
+          placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+          className={`${inputClass} font-mono`}
+        />
       </div>
 
       {/* Submit */}
@@ -150,7 +135,13 @@ export function TenantForm() {
           className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
         >
           {isPending && <Loader2 className="w-4 h-4 animate-spin" />}
-          {isPending ? "Creating..." : "Create Tenant"}
+          {isPending
+            ? isEdit
+              ? "Saving..."
+              : "Creating..."
+            : isEdit
+              ? "Save Changes"
+              : "Create Tenant"}
         </button>
       </div>
     </form>

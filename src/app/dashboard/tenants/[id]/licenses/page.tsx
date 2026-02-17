@@ -30,7 +30,7 @@ export default async function TenantLicensesPage({
   let error: string | null = null;
 
   try {
-    licenses = await getLicenses(id);
+    licenses = await getLicenses(Number(id));
   } catch (e) {
     error =
       e instanceof Error

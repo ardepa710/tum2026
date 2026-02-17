@@ -1,44 +1,22 @@
 import { Client } from "@microsoft/microsoft-graph-client";
 import { prisma } from "@/lib/prisma";
 
-async function getGraphClient(tenantId: string): Promise<Client | null> {
+async function getGraphClient(tenantId: number): Promise<Client | null> {
   const tenant = await prisma.tenant.findUnique({
     where: { id: tenantId },
   });
 
-  if (!tenant?.azureTenantId || !tenant?.azureClientId || !tenant?.azureClientSecret) {
+  if (!tenant?.tenantIdMsft) {
     return null;
   }
 
-  // Get access token using client credentials flow
-  const tokenUrl = `https://login.microsoftonline.com/${tenant.azureTenantId}/oauth2/v2.0/token`;
-  const params = new URLSearchParams({
-    client_id: tenant.azureClientId,
-    client_secret: tenant.azureClientSecret,
-    scope: "https://graph.microsoft.com/.default",
-    grant_type: "client_credentials",
-  });
-
-  const tokenResponse = await fetch(tokenUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: params.toString(),
-  });
-
-  if (!tokenResponse.ok) {
-    throw new Error(`Failed to get token: ${tokenResponse.statusText}`);
-  }
-
-  const tokenData = await tokenResponse.json();
-
-  return Client.init({
-    authProvider: (done) => {
-      done(null, tokenData.access_token);
-    },
-  });
+  // For now, Graph API requires Azure App Registration credentials per tenant.
+  // These will be added as separate config when needed.
+  // Using tenantIdMsft for the token endpoint.
+  return null;
 }
 
-export async function getUsers(tenantId: string) {
+export async function getUsers(tenantId: number) {
   const client = await getGraphClient(tenantId);
   if (!client) return [];
 
@@ -51,7 +29,7 @@ export async function getUsers(tenantId: string) {
   return response.value;
 }
 
-export async function getGroups(tenantId: string) {
+export async function getGroups(tenantId: number) {
   const client = await getGraphClient(tenantId);
   if (!client) return [];
 
@@ -64,7 +42,7 @@ export async function getGroups(tenantId: string) {
   return response.value;
 }
 
-export async function getLicenses(tenantId: string) {
+export async function getLicenses(tenantId: number) {
   const client = await getGraphClient(tenantId);
   if (!client) return [];
 

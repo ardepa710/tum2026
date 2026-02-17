@@ -26,7 +26,7 @@ export default async function TenantUsersPage({
   let error: string | null = null;
 
   try {
-    users = await getUsers(id);
+    users = await getUsers(Number(id));
   } catch (e) {
     error =
       e instanceof Error ? e.message : "Failed to fetch users from Graph API.";

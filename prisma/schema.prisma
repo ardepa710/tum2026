@@ -73,21 +73,21 @@ model User {
 }
 
 model Tenant {
-  id                String           @id @default(cuid())
-  name              String
-  domain            String?
-  azureTenantId     String?
-  azureClientId     String?
-  azureClientSecret String?
-  isActive          Boolean          @default(true)
-  automationTasks   AutomationTask[]
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
+  id              Int              @id @default(autoincrement())
+  tenantName      String           @map("tenant_name")
+  tenantAbbrv     String           @map("tenant_abbrv")
+  tenantIdRewst   String           @map("tenantid_rewst")
+  tenantIdMsft    String           @map("tenantid_msft")
+  regDttm         DateTime         @default(now()) @map("reg_dttm")
+  regUser         String           @map("reg_user")
+  automationTasks AutomationTask[]
+
+  @@map("tenants")
 }
 
 model AutomationTask {
   id          String     @id @default(cuid())
-  tenantId    String
+  tenantId    Int
   tenant      Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name        String
   description String?

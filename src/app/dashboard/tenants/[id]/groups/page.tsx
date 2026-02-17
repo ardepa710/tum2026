@@ -25,7 +25,7 @@ export default async function TenantGroupsPage({
   let error: string | null = null;
 
   try {
-    groups = await getGroups(id);
+    groups = await getGroups(Number(id));
   } catch (e) {
     error =
       e instanceof Error

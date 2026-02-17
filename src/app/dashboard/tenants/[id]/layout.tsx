@@ -12,15 +12,15 @@ export default async function TenantLayout({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const tenantId = Number(id);
+  if (isNaN(tenantId)) notFound();
 
   const tenant = await prisma.tenant.findUnique({
-    where: { id },
-    select: { id: true, name: true },
+    where: { id: tenantId },
+    select: { id: true, tenantName: true },
   });
 
-  if (!tenant) {
-    notFound();
-  }
+  if (!tenant) notFound();
 
   return (
     <div>
@@ -41,12 +41,12 @@ export default async function TenantLayout({
         </Link>
         <ChevronRight className="w-3.5 h-3.5 text-[var(--text-muted)]" />
         <span className="text-[var(--text-primary)] font-medium">
-          {tenant.name}
+          {tenant.tenantName}
         </span>
       </nav>
 
       {/* Tab Navigation */}
-      <TenantTabs tenantId={tenant.id} />
+      <TenantTabs tenantId={String(tenant.id)} />
 
       {/* Page Content */}
       {children}

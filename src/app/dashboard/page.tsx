@@ -1,9 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import {
   Building2,
-  Users,
   KeyRound,
   ListTodo,
+  CheckCircle2,
 } from "lucide-react";
 
 async function getStats() {
@@ -12,15 +12,12 @@ async function getStats() {
     prisma.automationTask.count(),
   ]);
 
-  const pendingTasks = await prisma.automationTask.count({
-    where: { status: "PENDING" },
-  });
+  const [pendingTasks, completedTasks] = await Promise.all([
+    prisma.automationTask.count({ where: { status: "PENDING" } }),
+    prisma.automationTask.count({ where: { status: "COMPLETED" } }),
+  ]);
 
-  const activeTenants = await prisma.tenant.count({
-    where: { isActive: true },
-  });
-
-  return { tenantCount, taskCount, pendingTasks, activeTenants };
+  return { tenantCount, taskCount, pendingTasks, completedTasks };
 }
 
 export default async function DashboardPage() {
@@ -34,9 +31,9 @@ export default async function DashboardPage() {
       color: "var(--accent)",
     },
     {
-      title: "Active Tenants",
-      value: stats.activeTenants,
-      icon: Users,
+      title: "Completed Tasks",
+      value: stats.completedTasks,
+      icon: CheckCircle2,
       color: "var(--success)",
     },
     {

@@ -40,7 +40,7 @@ export default async function TenantTasksPage({
   const { id } = await params;
 
   const tasks = await prisma.automationTask.findMany({
-    where: { tenantId: id },
+    where: { tenantId: Number(id) },
     orderBy: { createdAt: "desc" },
   });
 
