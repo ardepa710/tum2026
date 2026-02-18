@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { type ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/ui/data-table";
-import { FileBarChart, Loader2 } from "lucide-react";
+import { pdf } from "@react-pdf/renderer";
+import { ReportPdf } from "@/components/report-pdf";
+import { FileBarChart, FileText, Loader2 } from "lucide-react";
 
 // ---------- Report type definitions ----------
 
@@ -223,6 +225,30 @@ const filenameMap: Record<ReportType, string> = {
   "tech-permissions": "tech-permissions-report",
 };
 
+const labelMap: Record<ReportType, string> = {
+  licenses: "License Report",
+  health: "Health Summary Report",
+  "task-runs": "Task Runs Report",
+  security: "Security Posture Report",
+  "tech-permissions": "Tech Permissions Report",
+};
+
+const headersMap: Record<ReportType, string[]> = {
+  licenses: ["Tenant", "SKU", "Total", "Consumed", "Available", "Utilization"],
+  health: ["Tenant", "Score", "Users (0-40)", "Licenses (0-30)", "Policies (0-30)"],
+  "task-runs": ["Date", "Task", "Tenant", "Actor", "Target User", "Status", "Duration", "Ticket #"],
+  security: ["Tenant", "Enabled Policies", "Enabled Users", "Disabled Users", "Health Score"],
+  "tech-permissions": ["Technician", "Email", "Permission", "Description"],
+};
+
+const keysMap: Record<ReportType, string[]> = {
+  licenses: ["tenant", "sku", "total", "consumed", "available", "utilization"],
+  health: ["tenant", "score", "users", "licenses", "policies"],
+  "task-runs": ["date", "task", "tenant", "actor", "targetUser", "status", "duration", "ticket"],
+  security: ["tenant", "enabledPolicies", "enabledUsers", "disabledUsers", "healthScore"],
+  "tech-permissions": ["technician", "email", "permission", "description"],
+};
+
 // ---------- Component ----------
 
 export function ReportSelector() {
@@ -234,6 +260,7 @@ export function ReportSelector() {
   const [data, setData] = useState<any[]>([]);
   const [generated, setGenerated] = useState(false);
   const [error, setError] = useState("");
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   async function handleGenerate() {
     setLoading(true);
@@ -263,6 +290,32 @@ export function ReportSelector() {
       setError(err instanceof Error ? err.message : "Failed to generate report");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function exportPdf() {
+    setPdfLoading(true);
+    try {
+      const keys = keysMap[reportType];
+      const rows = data.map((row: Record<string, unknown>) =>
+        keys.map((k) => String(row[k] ?? ""))
+      );
+      const blob = await pdf(
+        <ReportPdf
+          title={labelMap[reportType]}
+          headers={headersMap[reportType]}
+          rows={rows}
+          generatedAt={new Date().toLocaleString()}
+        />
+      ).toBlob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${filenameMap[reportType]}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setPdfLoading(false);
     }
   }
 
@@ -335,6 +388,21 @@ export function ReportSelector() {
             )}
             Generate
           </button>
+
+          {generated && data.length > 0 && (
+            <button
+              onClick={exportPdf}
+              disabled={pdfLoading}
+              className="flex items-center gap-2 px-5 py-2 bg-[var(--bg-hover)] text-[var(--text-primary)] text-sm font-medium rounded-lg hover:bg-[var(--border)] disabled:opacity-50 transition-colors"
+            >
+              {pdfLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <FileText className="w-4 h-4" />
+              )}
+              Export PDF
+            </button>
+          )}
         </div>
       </div>
 
