@@ -1,8 +1,12 @@
 import { auth } from "@/lib/auth";
+import { cookies } from "next/headers";
 import { Search, Bell } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export async function Header() {
   const session = await auth();
+  const cookieStore = await cookies();
+  const theme = cookieStore.get("theme")?.value || "dark";
 
   return (
     <header className="h-16 border-b border-[var(--border)] bg-[var(--bg-secondary)] flex items-center justify-between px-6">
@@ -18,6 +22,8 @@ export async function Header() {
 
       {/* Right side */}
       <div className="flex items-center gap-4">
+        <ThemeToggle initialTheme={theme} />
+
         <button className="relative p-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
           <Bell className="w-5 h-5" />
         </button>
