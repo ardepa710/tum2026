@@ -20,6 +20,12 @@ enum TaskStatus {
   FAILED
 }
 
+enum RunStatus {
+  RUNNING
+  SUCCESS
+  FAILED
+}
+
 // NextAuth required models
 model Account {
   id                String  @id @default(cuid())
@@ -70,6 +76,8 @@ model User {
   accounts        Account[]
   sessions        Session[]
   userPermissions UserPermission[]
+  notifications        Notification[]
+  notificationPref     NotificationPreference?
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 }
@@ -84,6 +92,7 @@ model Tenant {
   regDttm         DateTime         @default(now()) @map("reg_dttm")
   regUser         String           @map("reg_user")
   automationTasks AutomationTask[]
+  taskRuns        TaskRun[]
 
   @@map("tenants")
 }
@@ -116,6 +125,8 @@ model MasterTask {
   taskGroup        String? @map("task_group")
   systemMgr        String?          @map("system_mgr")
   taskPermissions  TaskPermission[]
+  taskRuns         TaskRun[]
+  runbooks         Runbook[]
 
   @@map("tbmtasks")
 }
@@ -177,4 +188,82 @@ model Technician {
   createdAt      DateTime @default(now()) @map("created_at")
 
   @@map("tbmtechnicians")
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  timestamp DateTime @default(now())
+  actor     String
+  action    String
+  entity    String
+  entityId  String?  @map("entity_id")
+  details   String?  @db.Text
+
+  @@index([actor])
+  @@index([entity])
+  @@index([timestamp])
+  @@map("tbmlog_events")
+}
+
+model TaskRun {
+  id           Int        @id @default(autoincrement())
+  taskId       Int        @map("task_id")
+  task         MasterTask @relation(fields: [taskId], references: [id])
+  tenantId     Int        @map("tenant_id")
+  tenant       Tenant     @relation(fields: [tenantId], references: [id])
+  targetUser   String?    @map("target_user")
+  actor        String
+  status       RunStatus  @default(RUNNING)
+  ticketNumber String?    @map("ticket_number")
+  output       String?    @db.Text
+  errorMessage String?    @map("error_message") @db.Text
+  durationMs   Int?       @map("duration_ms")
+  startedAt    DateTime   @default(now()) @map("started_at")
+  completedAt  DateTime?  @map("completed_at")
+
+  @@index([actor])
+  @@index([status])
+  @@index([startedAt])
+  @@map("tbmtask_runs")
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  body      String?  @db.Text
+  link      String?
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("tbmnotifications")
+}
+
+model NotificationPreference {
+  id          Int     @id @default(autoincrement())
+  userId      String  @unique @map("user_id")
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  onTaskRun   Boolean @default(true) @map("on_task_run")
+  onTaskFail  Boolean @default(true) @map("on_task_fail")
+  onTechSync  Boolean @default(true) @map("on_tech_sync")
+  onNewTenant Boolean @default(false) @map("on_new_tenant")
+
+  @@map("tbmnotification_prefs")
+}
+
+model Runbook {
+  id        Int         @id @default(autoincrement())
+  title     String
+  category  String?
+  content   String      @db.Text
+  taskId    Int?        @map("task_id")
+  task      MasterTask? @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  createdBy String      @map("created_by")
+  createdAt DateTime    @default(now()) @map("created_at")
+  updatedAt DateTime    @updatedAt @map("updated_at")
+
+  @@map("tbmrunbooks")
 }

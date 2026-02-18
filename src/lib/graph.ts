@@ -212,3 +212,52 @@ export async function getGroupOwners(tenantId: number, groupId: string) {
 
   return response.value;
 }
+
+// --- Conditional Access Policies ---
+
+export async function getConditionalAccessPolicies(tenantId: number) {
+  const client = await getGraphClient(tenantId);
+  if (!client) return [];
+
+  try {
+    const response = await client
+      .api("/identity/conditionalAccess/policies")
+      .select("id,displayName,state,conditions,grantControls")
+      .get();
+    return response.value;
+  } catch {
+    return [];
+  }
+}
+
+// --- Service Health ---
+
+export async function getServiceHealth(tenantId: number) {
+  const client = await getGraphClient(tenantId);
+  if (!client) return [];
+
+  try {
+    const response = await client
+      .api("/admin/serviceAnnouncement/healthOverviews")
+      .get();
+    return response.value;
+  } catch {
+    return [];
+  }
+}
+
+export async function getServiceHealthIssues(tenantId: number) {
+  const client = await getGraphClient(tenantId);
+  if (!client) return [];
+
+  try {
+    const response = await client
+      .api("/admin/serviceAnnouncement/issues")
+      .filter("isResolved eq false")
+      .top(50)
+      .get();
+    return response.value;
+  } catch {
+    return [];
+  }
+}

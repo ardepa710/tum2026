@@ -8,6 +8,7 @@ import {
   UsersRound,
   KeyRound,
   ListTodo,
+  ShieldCheck,
 } from "lucide-react";
 
 interface TenantTabsProps {
@@ -20,6 +21,7 @@ const tabs = [
   { label: "Groups", segment: "/groups", icon: UsersRound },
   { label: "Licenses", segment: "/licenses", icon: KeyRound },
   { label: "Tasks", segment: "/tasks", icon: ListTodo },
+  { label: "Policies", segment: "/policies", icon: ShieldCheck },
 ];
 
 export function TenantTabs({ tenantId }: TenantTabsProps) {

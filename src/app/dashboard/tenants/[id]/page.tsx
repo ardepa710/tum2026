@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { calculateHealthScore } from "@/lib/health-score";
+import { HealthBadge } from "@/components/health-badge";
 import {
   Building2,
   Hash,
@@ -8,6 +10,7 @@ import {
   ListTodo,
   Calendar,
   User,
+  Activity,
 } from "lucide-react";
 
 export default async function TenantDetailPage({
@@ -29,6 +32,8 @@ export default async function TenantDetailPage({
   });
 
   if (!tenant) notFound();
+
+  const healthData = await calculateHealthScore(tenantId);
 
   const taskCounts = {
     total: tenant.automationTasks.length,
@@ -73,7 +78,53 @@ export default async function TenantDetailPage({
       </div>
 
       {/* Info Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {/* Health Score Card */}
+        <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Activity className="w-5 h-5" style={{ color: "var(--accent)" }} />
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+              Health Score
+            </h3>
+            <HealthBadge score={healthData.score} />
+          </div>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-[var(--text-muted)]">
+                Users ({healthData.breakdown.users}/40)
+              </span>
+              <div className="w-24 h-1.5 bg-[var(--bg-hover)] rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-[var(--accent)] rounded-full"
+                  style={{ width: `${(healthData.breakdown.users / 40) * 100}%` }}
+                />
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-[var(--text-muted)]">
+                Licenses ({healthData.breakdown.licenses}/30)
+              </span>
+              <div className="w-24 h-1.5 bg-[var(--bg-hover)] rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-[var(--accent)] rounded-full"
+                  style={{ width: `${(healthData.breakdown.licenses / 30) * 100}%` }}
+                />
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-[var(--text-muted)]">
+                Policies ({healthData.breakdown.policies}/30)
+              </span>
+              <div className="w-24 h-1.5 bg-[var(--bg-hover)] rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-[var(--accent)] rounded-full"
+                  style={{ width: `${(healthData.breakdown.policies / 30) * 100}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Platform IDs Card */}
         <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-5">
           <div className="flex items-center gap-2 mb-4">

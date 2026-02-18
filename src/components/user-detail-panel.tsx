@@ -66,6 +66,7 @@ export function UserDetailPanel({
   const [visible, setVisible] = useState(false);
   const [availableTasks, setAvailableTasks] = useState<AvailableTask[]>([]);
   const [selectedTaskId, setSelectedTaskId] = useState("");
+  const [ticketNumber, setTicketNumber] = useState("");
 
   // Slide-in animation
   useEffect(() => {
@@ -217,7 +218,10 @@ export function UserDetailPanel({
                 <div className="relative flex-1">
                   <select
                     value={selectedTaskId}
-                    onChange={(e) => setSelectedTaskId(e.target.value)}
+                    onChange={(e) => {
+                      setSelectedTaskId(e.target.value);
+                      setTicketNumber("");
+                    }}
                     className="w-full appearance-none px-3 py-2 pr-8 bg-[var(--bg-primary)] border border-[var(--border)] rounded-lg text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)] transition-colors"
                   >
                     <option value="">Select a task...</option>
@@ -236,6 +240,30 @@ export function UserDetailPanel({
                   Execute
                 </button>
               </div>
+              {/* Freshservice Ticket # — visible only when task requires ticket */}
+              {selectedTask?.ticketRequired && (
+                <div className="mt-2">
+                  <div className="flex items-center gap-2">
+                    <Ticket className="w-4 h-4 text-[var(--warning)]" />
+                    <label className="text-xs font-semibold text-[var(--text-primary)]">
+                      Freshservice Ticket #
+                    </label>
+                  </div>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="e.g. 123456"
+                    value={ticketNumber}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, "").slice(0, 6);
+                      setTicketNumber(val);
+                    }}
+                    maxLength={6}
+                    className="mt-1 w-full px-3 py-2 bg-[var(--bg-primary)] border border-[var(--border)] rounded-lg text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--warning)] transition-colors font-mono tracking-wider"
+                  />
+                </div>
+              )}
+
               {selectedTask && (
                 <div className="mt-2 flex items-center gap-2 flex-wrap">
                   <span className="text-xs text-[var(--text-muted)] font-mono">
