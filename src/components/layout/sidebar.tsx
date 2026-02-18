@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { type Role, canAccessPage } from "@/lib/rbac";
+import { type Role, canAccessPage } from "@/lib/rbac-shared";
 import {
   LayoutDashboard,
   Building2,
