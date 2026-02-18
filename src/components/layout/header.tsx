@@ -1,7 +1,9 @@
 import { auth } from "@/lib/auth";
 import { cookies } from "next/headers";
-import { Search, Bell } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { GlobalSearch } from "@/components/global-search";
+import { NotificationBell } from "@/components/notification-bell";
+import { MobileMenuButton } from "@/components/layout/mobile-menu-button";
 
 export async function Header() {
   const session = await auth();
@@ -10,23 +12,19 @@ export async function Header() {
 
   return (
     <header className="h-16 border-b border-[var(--border)] bg-[var(--bg-secondary)] flex items-center justify-between px-6">
-      {/* Search */}
-      <div className="relative w-80">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
-        <input
-          type="text"
-          placeholder="Search tenants, users..."
-          className="w-full pl-10 pr-4 py-2 bg-[var(--bg-primary)] border border-[var(--border)] rounded-lg text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]"
-        />
+      {/* Left side */}
+      <div className="flex items-center gap-3">
+        <MobileMenuButton />
+        <div className="hidden sm:block">
+          <GlobalSearch />
+        </div>
       </div>
 
       {/* Right side */}
       <div className="flex items-center gap-4">
         <ThemeToggle initialTheme={theme} />
 
-        <button className="relative p-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
-          <Bell className="w-5 h-5" />
-        </button>
+        <NotificationBell />
 
         {session?.user && (
           <div className="flex items-center gap-3">

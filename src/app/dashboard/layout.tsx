@@ -12,7 +12,7 @@ export default async function DashboardLayout({
   return (
     <div className="min-h-screen">
       <Sidebar role={role} />
-      <div className="ml-[var(--sidebar-width)]">
+      <div className="md:ml-16 lg:ml-[260px] pb-16 md:pb-0">
         <Header />
         <main className="p-6">{children}</main>
       </div>

@@ -16,6 +16,8 @@
   --warning: #f59e0b;
   --error: #ef4444;
   --sidebar-width: 260px;
+  --sidebar-width-collapsed: 64px;
+  --bottom-nav-height: 64px;
 }
 
 /* Light theme */
@@ -51,4 +53,25 @@ body {
 ::-webkit-scrollbar-thumb {
   background: var(--border);
   border-radius: 3px;
+}
+
+/* Mobile adjustments */
+@media (max-width: 767px) {
+  :root {
+    --sidebar-width: 0px;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  :root {
+    --sidebar-width: 64px;
+  }
+}
+
+@keyframes slide-in-left {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+.animate-slide-in-left {
+  animation: slide-in-left 0.2s ease-out;
 }
