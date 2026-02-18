@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { ActionBadge } from "@/components/action-badge";
+import { DashboardCharts } from "@/components/dashboard-charts";
 import { getSessionRole, hasMinRole } from "@/lib/rbac";
 import {
   Building2,
@@ -129,6 +130,9 @@ export default async function DashboardPage() {
           );
         })}
       </div>
+
+      {/* Analytics Charts */}
+      <DashboardCharts />
 
       {/* Two-Column Layout: Recent Activity + Quick Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
