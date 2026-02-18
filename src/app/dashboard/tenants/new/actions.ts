@@ -3,11 +3,14 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { logAudit, getActor } from "@/lib/audit";
+import { requireRole } from "@/lib/rbac";
 
 export async function createTenant(
   _prevState: { error: string },
   formData: FormData
 ) {
+  await requireRole("EDITOR");
   const session = await auth();
   if (!session?.user?.email) {
     return { error: "You must be logged in to create a tenant." };
@@ -24,8 +27,9 @@ export async function createTenant(
   if (!tenantIdRewst) return { error: "Rewst Tenant ID is required." };
   if (!tenantIdMsft) return { error: "Microsoft Tenant ID is required." };
 
+  let newTenant;
   try {
-    await prisma.tenant.create({
+    newTenant = await prisma.tenant.create({
       data: {
         tenantName,
         tenantAbbrv,
@@ -39,6 +43,7 @@ export async function createTenant(
     return { error: "Failed to create tenant. Please try again." };
   }
 
+  logAudit({ actor: session.user.email, action: "CREATE", entity: "TENANT", entityId: newTenant.id, details: { tenantName, tenantAbbrv } });
   redirect("/dashboard/tenants");
 }
 
@@ -46,6 +51,8 @@ export async function updateTenant(
   _prevState: { error: string },
   formData: FormData
 ) {
+  await requireRole("EDITOR");
+  const actor = await getActor();
   const id = Number(formData.get("id"));
   const tenantName = (formData.get("tenantName") as string)?.trim();
   const tenantAbbrv = (formData.get("tenantAbbrv") as string)?.trim();
@@ -67,10 +74,15 @@ export async function updateTenant(
     return { error: "Failed to update tenant. Please try again." };
   }
 
+  logAudit({ actor, action: "UPDATE", entity: "TENANT", entityId: id, details: { tenantName, tenantAbbrv } });
   redirect(`/dashboard/tenants/${id}`);
 }
 
 export async function deleteTenant(id: number) {
+  await requireRole("EDITOR");
+  const actor = await getActor();
+  const tenant = await prisma.tenant.findUnique({ where: { id }, select: { tenantName: true } });
   await prisma.tenant.delete({ where: { id } });
+  logAudit({ actor, action: "DELETE", entity: "TENANT", entityId: id, details: { tenantName: tenant?.tenantName } });
   redirect("/dashboard/tenants");
 }

@@ -2,11 +2,15 @@
 
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
+import { logAudit, getActor } from "@/lib/audit";
+import { requireRole } from "@/lib/rbac";
 
 export async function createMasterTask(
   _prevState: { error: string },
   formData: FormData
 ) {
+  await requireRole("EDITOR");
+  const actor = await getActor();
   const taskName = (formData.get("taskName") as string)?.trim();
   const taskCode = (formData.get("taskCode") as string)?.trim();
   const taskDetails = (formData.get("taskDetails") as string)?.trim() || null;
@@ -23,8 +27,9 @@ export async function createMasterTask(
   if (!taskName) return { error: "Task Name is required." };
   if (!taskCode) return { error: "Task Code is required." };
 
+  let newTask;
   try {
-    await prisma.masterTask.create({
+    newTask = await prisma.masterTask.create({
       data: {
         taskName,
         taskCode,
@@ -42,6 +47,7 @@ export async function createMasterTask(
     return { error: "Failed to create task. Please try again." };
   }
 
+  logAudit({ actor, action: "CREATE", entity: "TASK", entityId: newTask.id, details: { taskName, taskCode } });
   redirect("/dashboard/tasks");
 }
 
@@ -49,6 +55,8 @@ export async function updateMasterTask(
   _prevState: { error: string },
   formData: FormData
 ) {
+  await requireRole("EDITOR");
+  const actor = await getActor();
   const id = Number(formData.get("id"));
   const taskName = (formData.get("taskName") as string)?.trim();
   const taskCode = (formData.get("taskCode") as string)?.trim();
@@ -86,10 +94,15 @@ export async function updateMasterTask(
     return { error: "Failed to update task. Please try again." };
   }
 
+  logAudit({ actor, action: "UPDATE", entity: "TASK", entityId: id, details: { taskName, taskCode } });
   redirect(`/dashboard/tasks/${id}`);
 }
 
 export async function deleteMasterTask(id: number) {
+  await requireRole("EDITOR");
+  const actor = await getActor();
+  const task = await prisma.masterTask.findUnique({ where: { id }, select: { taskName: true } });
   await prisma.masterTask.delete({ where: { id } });
+  logAudit({ actor, action: "DELETE", entity: "TASK", entityId: id, details: { taskName: task?.taskName } });
   redirect("/dashboard/tasks");
 }

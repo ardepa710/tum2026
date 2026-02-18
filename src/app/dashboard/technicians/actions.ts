@@ -4,11 +4,15 @@ import { prisma } from "@/lib/prisma";
 import { getGroups, getGroupMembers } from "@/lib/graph";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { logAudit, getActor } from "@/lib/audit";
+import { requireRole } from "@/lib/rbac";
 
 const SENTINEL_EDGE_TENANT_ID = 10;
 const TUM_APP_GROUP_NAME = "TUM APP";
 
 export async function syncTechnicians() {
+  await requireRole("ADMIN");
+  const actor = await getActor();
   try {
     // 1. Fetch all groups and find "TUM APP"
     const groups = await getGroups(SENTINEL_EDGE_TENANT_ID);
@@ -68,6 +72,7 @@ export async function syncTechnicians() {
 
     revalidatePath("/dashboard/technicians");
 
+    logAudit({ actor, action: "SYNC", entity: "TECHNICIAN", details: { count: syncedCount, groupName: TUM_APP_GROUP_NAME } });
     return {
       success: true,
       message: `Synced ${syncedCount} technician(s) successfully.`,
@@ -81,6 +86,10 @@ export async function syncTechnicians() {
 }
 
 export async function deleteTechnician(id: number) {
+  await requireRole("ADMIN");
+  const actor = await getActor();
+  const tech = await prisma.technician.findUnique({ where: { id }, select: { displayName: true, email: true } });
   await prisma.technician.delete({ where: { id } });
+  logAudit({ actor, action: "DELETE", entity: "TECHNICIAN", entityId: id, details: { displayName: tech?.displayName, email: tech?.email } });
   redirect("/dashboard/technicians");
 }
