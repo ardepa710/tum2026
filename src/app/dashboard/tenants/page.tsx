@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { getSessionRole, hasMinRole } from "@/lib/rbac";
+import { calculateHealthScore } from "@/lib/health-score";
+import { HealthBadge } from "@/components/health-badge";
 import {
   Building2,
   Plus,
@@ -11,6 +14,7 @@ import {
 } from "lucide-react";
 
 export default async function TenantsPage() {
+  const role = await getSessionRole();
   const tenants = await prisma.tenant.findMany({
     include: {
       _count: {
@@ -18,6 +22,19 @@ export default async function TenantsPage() {
       },
     },
     orderBy: { regDttm: "desc" },
+  });
+
+  // Calculate health scores for all tenants in parallel
+  const healthResults = await Promise.allSettled(
+    tenants.map((t) => calculateHealthScore(t.id))
+  );
+  const healthScores = new Map<number, number>();
+  tenants.forEach((t, i) => {
+    const result = healthResults[i];
+    healthScores.set(
+      t.id,
+      result.status === "fulfilled" ? result.value.score : 0
+    );
   });
 
   return (
@@ -32,13 +49,15 @@ export default async function TenantsPage() {
             {tenants.length} tenant{tenants.length !== 1 ? "s" : ""} registered
           </p>
         </div>
-        <Link
-          href="/dashboard/tenants/new"
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-sm font-medium rounded-lg transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Add Tenant
-        </Link>
+        {hasMinRole(role, "EDITOR") && (
+          <Link
+            href="/dashboard/tenants/new"
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Add Tenant
+          </Link>
+        )}
       </div>
 
       {/* Tenant Grid */}
@@ -53,13 +72,15 @@ export default async function TenantsPage() {
           <p className="text-sm text-[var(--text-muted)] mb-6 max-w-md mx-auto">
             Get started by adding your first tenant.
           </p>
-          <Link
-            href="/dashboard/tenants/new"
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-sm font-medium rounded-lg transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Add Your First Tenant
-          </Link>
+          {hasMinRole(role, "EDITOR") && (
+            <Link
+              href="/dashboard/tenants/new"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Add Your First Tenant
+            </Link>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -79,9 +100,12 @@ export default async function TenantsPage() {
                     />
                   </div>
                   <div>
-                    <h3 className="text-sm font-semibold text-[var(--text-primary)] group-hover:text-[var(--accent)] transition-colors">
-                      {tenant.tenantName}
-                    </h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-semibold text-[var(--text-primary)] group-hover:text-[var(--accent)] transition-colors">
+                        {tenant.tenantName}
+                      </h3>
+                      <HealthBadge score={healthScores.get(tenant.id) ?? 0} />
+                    </div>
                     <div className="flex items-center gap-1 mt-0.5">
                       <Hash className="w-3 h-3 text-[var(--text-muted)]" />
                       <span className="text-xs text-[var(--text-muted)] font-mono">

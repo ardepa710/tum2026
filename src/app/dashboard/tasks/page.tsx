@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { getSessionRole, hasMinRole } from "@/lib/rbac";
 import {
   Cog,
   Plus,
@@ -12,6 +13,7 @@ import {
 } from "lucide-react";
 
 export default async function TasksPage() {
+  const role = await getSessionRole();
   const tasks = await prisma.masterTask.findMany({
     orderBy: { id: "asc" },
   });
@@ -28,13 +30,15 @@ export default async function TasksPage() {
             {tasks.length} task{tasks.length !== 1 ? "s" : ""} configured
           </p>
         </div>
-        <Link
-          href="/dashboard/tasks/new"
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-sm font-medium rounded-lg transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Add Task
-        </Link>
+        {hasMinRole(role, "EDITOR") && (
+          <Link
+            href="/dashboard/tasks/new"
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Add Task
+          </Link>
+        )}
       </div>
 
       {/* Task Grid */}
@@ -49,13 +53,15 @@ export default async function TasksPage() {
           <p className="text-sm text-[var(--text-muted)] mb-6 max-w-md mx-auto">
             Get started by adding your first automation task definition.
           </p>
-          <Link
-            href="/dashboard/tasks/new"
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-sm font-medium rounded-lg transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Add Your First Task
-          </Link>
+          {hasMinRole(role, "EDITOR") && (
+            <Link
+              href="/dashboard/tasks/new"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Add Your First Task
+            </Link>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

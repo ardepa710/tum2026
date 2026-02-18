@@ -3,14 +3,20 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
+import { type Role, canAccessPage } from "@/lib/rbac";
 import {
   LayoutDashboard,
   Building2,
   Users,
   UsersRound,
+  CreditCard,
   Cog,
+  History,
   ShieldCheck,
   Wrench,
+  BookOpen,
+  HeartPulse,
+  ScrollText,
   Settings,
   LogOut,
   Shield,
@@ -21,13 +27,18 @@ const navItems = [
   { href: "/dashboard/tenants", label: "Tenants", icon: Building2 },
   { href: "/dashboard/users", label: "Users", icon: Users },
   { href: "/dashboard/groups", label: "Groups", icon: UsersRound },
+  { href: "/dashboard/licenses", label: "Licenses", icon: CreditCard },
   { href: "/dashboard/tasks", label: "Tasks", icon: Cog },
+  { href: "/dashboard/runs", label: "Task Runs", icon: History },
   { href: "/dashboard/permissions", label: "Permissions", icon: ShieldCheck },
   { href: "/dashboard/technicians", label: "Technicians", icon: Wrench },
+  { href: "/dashboard/runbooks", label: "Runbooks", icon: BookOpen },
+  { href: "/dashboard/health", label: "Service Health", icon: HeartPulse },
+  { href: "/dashboard/logs", label: "Audit Logs", icon: ScrollText },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
-export function Sidebar() {
+export function Sidebar({ role }: { role: Role }) {
   const pathname = usePathname();
 
   return (
@@ -47,7 +58,7 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-1">
-        {navItems.map((item) => {
+        {navItems.filter((item) => canAccessPage(role, item.href)).map((item) => {
           const isActive =
             item.href === "/dashboard"
               ? pathname === "/dashboard"

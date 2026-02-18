@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { requireRole } from "@/lib/rbac";
 import {
   ShieldCheck,
   Plus,
@@ -11,6 +12,7 @@ import {
 } from "lucide-react";
 
 export default async function PermissionsPage() {
+  await requireRole("ADMIN");
   const permissions = await prisma.permission.findMany({
     include: {
       _count: {

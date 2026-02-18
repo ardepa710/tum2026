@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { requireRole } from "@/lib/rbac";
 import { SyncTechniciansButton } from "@/components/sync-technicians-button";
 import {
   UserRound,
@@ -11,6 +12,7 @@ import {
 } from "lucide-react";
 
 export default async function TechniciansPage() {
+  await requireRole("ADMIN");
   const technicians = await prisma.technician.findMany({
     orderBy: { displayName: "asc" },
   });
