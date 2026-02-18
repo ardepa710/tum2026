@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     if (to) {
       const toDate = new Date(to);
       toDate.setDate(toDate.getDate() + 1);
-      startedAt.lte = toDate;
+      startedAt.lt = toDate;
     }
     where.startedAt = startedAt;
   }
