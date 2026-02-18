@@ -19,6 +19,7 @@ import {
   AlertTriangle,
   HeartPulse,
   ScrollText,
+  FileBarChart,
   Settings,
   LogOut,
   Shield,
@@ -39,6 +40,7 @@ const navItems = [
   { href: "/dashboard/alerts", label: "Alerts", icon: AlertTriangle },
   { href: "/dashboard/health", label: "Service Health", icon: HeartPulse },
   { href: "/dashboard/logs", label: "Audit Logs", icon: ScrollText },
+  { href: "/dashboard/reports", label: "Reports", icon: FileBarChart },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
