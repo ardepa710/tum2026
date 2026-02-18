@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   Search,
@@ -134,7 +134,7 @@ export function GlobalSearch() {
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
-  const flat = flattenResults(localResults, userResults);
+  const flat = useMemo(() => flattenResults(localResults, userResults), [localResults, userResults]);
   const hasAnyResult = flat.length > 0;
 
   /* --- Navigate on select --- */
@@ -216,8 +216,8 @@ export function GlobalSearch() {
     }, 150);
 
     // User search: slower, longer debounce
-    setIsLoadingUsers(true);
     const userTimeout = setTimeout(async () => {
+      setIsLoadingUsers(true);
       try {
         const res = await fetch(`/api/search?q=${encoded}`);
         if (res.ok) {
@@ -235,8 +235,14 @@ export function GlobalSearch() {
     return () => {
       clearTimeout(localTimeout);
       clearTimeout(userTimeout);
+      setIsLoadingUsers(false);
     };
   }, [query]);
+
+  /* --- Reset activeIndex when results change --- */
+  useEffect(() => {
+    setActiveIndex(-1);
+  }, [localResults, userResults]);
 
   /* --- Close on click outside --- */
   useEffect(() => {
