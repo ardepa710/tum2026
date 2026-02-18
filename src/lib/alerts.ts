@@ -8,8 +8,7 @@ export interface Alert {
     | "failed_runs"
     | "low_health"
     | "service_degraded"
-    | "stale_sync"
-    | "low_utilization";
+    | "stale_sync";
   severity: "error" | "warning" | "info";
   title: string;
   description: string;
@@ -18,7 +17,8 @@ export interface Alert {
   link?: string;
 }
 
-// In-memory cache with 10-minute TTL
+// Best-effort in-memory cache — resets on serverless cold starts.
+// Effective within a single process lifetime (e.g., `next dev` or long-lived server).
 let alertCache: { data: Alert[]; expiresAt: number } | null = null;
 const CACHE_TTL = 600000; // 10 minutes
 

@@ -9,7 +9,10 @@ export function AlertBanner() {
 
   useEffect(() => {
     fetch("/api/alerts")
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error("fetch failed");
+        return r.json();
+      })
       .then((alerts) => {
         const urgent = alerts.filter(
           (a: { severity: string }) =>
