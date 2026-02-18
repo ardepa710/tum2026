@@ -1,5 +1,6 @@
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
+import { BottomNav } from "@/components/layout/bottom-nav";
 import { getSessionRole } from "@/lib/rbac";
 
 export default async function DashboardLayout({
@@ -16,6 +17,7 @@ export default async function DashboardLayout({
         <Header />
         <main className="p-6">{children}</main>
       </div>
+      <BottomNav />
     </div>
   );
 }
