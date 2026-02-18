@@ -21,6 +21,11 @@ import {
   Tag,
   Loader2,
   AlertTriangle,
+  Cog,
+  Ticket,
+  UserCheck,
+  RefreshCw,
+  ChevronDown,
 } from "lucide-react";
 import type {
   UserDetailResponse,
@@ -29,6 +34,18 @@ import type {
   MailboxSettings,
   ManagerInfo,
 } from "@/lib/types/user-detail";
+
+type AvailableTask = {
+  id: number;
+  taskName: string;
+  taskCode: string;
+  taskDetails: string | null;
+  ticketRequired: boolean;
+  usernameRequired: boolean;
+  syncRequired: boolean;
+  rewstWebhook: string | null;
+  tenantExclusive: string | null;
+};
 
 type UserDetailPanelProps = {
   tenantId: string;
@@ -47,6 +64,8 @@ export function UserDetailPanel({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [visible, setVisible] = useState(false);
+  const [availableTasks, setAvailableTasks] = useState<AvailableTask[]>([]);
+  const [selectedTaskId, setSelectedTaskId] = useState("");
 
   // Slide-in animation
   useEffect(() => {
@@ -110,6 +129,18 @@ export function UserDetailPanel({
     };
   }, [tenantId, userId]);
 
+  // Fetch available tasks for the logged-in technician
+  useEffect(() => {
+    fetch("/api/tech/available-tasks")
+      .then((res) => (res.ok ? res.json() : []))
+      .then((tasks: AvailableTask[]) => setAvailableTasks(tasks))
+      .catch(() => setAvailableTasks([]));
+  }, []);
+
+  const selectedTask = availableTasks.find(
+    (t) => t.id === Number(selectedTaskId)
+  );
+
   // Initials for avatar
   const initials = userName
     .split(" ")
@@ -172,6 +203,66 @@ export function UserDetailPanel({
               </button>
             </div>
           </div>
+
+          {/* Task Selector */}
+          {availableTasks.length > 0 && (
+            <div className="px-6 py-3 border-b border-[var(--border)] bg-[var(--bg-card)]">
+              <div className="flex items-center gap-2 mb-2">
+                <Cog className="w-4 h-4 text-[var(--accent)]" />
+                <span className="text-xs font-semibold text-[var(--text-primary)]">
+                  Run Task
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <select
+                    value={selectedTaskId}
+                    onChange={(e) => setSelectedTaskId(e.target.value)}
+                    className="w-full appearance-none px-3 py-2 pr-8 bg-[var(--bg-primary)] border border-[var(--border)] rounded-lg text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)] transition-colors"
+                  >
+                    <option value="">Select a task...</option>
+                    {availableTasks.map((task) => (
+                      <option key={task.id} value={task.id}>
+                        {task.taskName}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)] pointer-events-none" />
+                </div>
+                <button
+                  disabled={!selectedTaskId}
+                  className="px-4 py-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
+                >
+                  Execute
+                </button>
+              </div>
+              {selectedTask && (
+                <div className="mt-2 flex items-center gap-2 flex-wrap">
+                  <span className="text-xs text-[var(--text-muted)] font-mono">
+                    {selectedTask.taskCode}
+                  </span>
+                  {selectedTask.ticketRequired && (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-[var(--warning)]/10 text-[var(--warning)] text-[10px] rounded">
+                      <Ticket className="w-2.5 h-2.5" />
+                      Ticket
+                    </span>
+                  )}
+                  {selectedTask.usernameRequired && (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-[var(--accent)]/10 text-[var(--accent)] text-[10px] rounded">
+                      <UserCheck className="w-2.5 h-2.5" />
+                      Username
+                    </span>
+                  )}
+                  {selectedTask.syncRequired && (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-[var(--success)]/10 text-[var(--success)] text-[10px] rounded">
+                      <RefreshCw className="w-2.5 h-2.5" />
+                      Sync
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Body */}
           <div className="flex-1 overflow-y-auto">
