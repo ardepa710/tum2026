@@ -3,8 +3,6 @@
 import { useState } from "react";
 import { type ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/ui/data-table";
-import { pdf } from "@react-pdf/renderer";
-import { ReportPdf } from "@/components/report-pdf";
 import { FileBarChart, FileText, Loader2 } from "lucide-react";
 
 // ---------- Report type definitions ----------
@@ -296,6 +294,8 @@ export function ReportSelector() {
   async function exportPdf() {
     setPdfLoading(true);
     try {
+      const { pdf } = await import("@react-pdf/renderer");
+      const { ReportPdf } = await import("@/components/report-pdf");
       const keys = keysMap[reportType];
       const rows = data.map((row: Record<string, unknown>) =>
         keys.map((k) => String(row[k] ?? ""))
@@ -314,6 +314,8 @@ export function ReportSelector() {
       a.download = `${filenameMap[reportType]}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to export PDF");
     } finally {
       setPdfLoading(false);
     }
@@ -437,7 +439,7 @@ export function ReportSelector() {
           </h3>
           <p className="text-sm text-[var(--text-muted)] max-w-md mx-auto">
             Choose a report type from the dropdown above to preview the data.
-            You can export the results as CSV.
+            You can export the results as CSV or PDF.
           </p>
         </div>
       )}
