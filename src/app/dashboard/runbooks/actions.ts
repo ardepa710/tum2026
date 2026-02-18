@@ -79,7 +79,11 @@ export async function deleteRunbook(id: number) {
     where: { id },
     select: { title: true },
   });
-  await prisma.runbook.delete({ where: { id } });
+  try {
+    await prisma.runbook.delete({ where: { id } });
+  } catch {
+    redirect("/dashboard/runbooks");
+  }
   logAudit({
     actor,
     action: "DELETE",
