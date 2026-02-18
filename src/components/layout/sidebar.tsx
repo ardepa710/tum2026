@@ -8,6 +8,9 @@ import {
   Building2,
   Users,
   UsersRound,
+  Cog,
+  ShieldCheck,
+  Wrench,
   Settings,
   LogOut,
   Shield,
@@ -18,6 +21,9 @@ const navItems = [
   { href: "/dashboard/tenants", label: "Tenants", icon: Building2 },
   { href: "/dashboard/users", label: "Users", icon: Users },
   { href: "/dashboard/groups", label: "Groups", icon: UsersRound },
+  { href: "/dashboard/tasks", label: "Tasks", icon: Cog },
+  { href: "/dashboard/permissions", label: "Permissions", icon: ShieldCheck },
+  { href: "/dashboard/technicians", label: "Technicians", icon: Wrench },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
