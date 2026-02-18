@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { ActionBadge } from "@/components/action-badge";
+import { AlertBanner } from "@/components/alert-banner";
 import { DashboardCharts } from "@/components/dashboard-charts";
 import { getSessionRole, hasMinRole } from "@/lib/rbac";
 import {
@@ -130,6 +131,9 @@ export default async function DashboardPage() {
           );
         })}
       </div>
+
+      {/* Alert Banner */}
+      <AlertBanner />
 
       {/* Analytics Charts */}
       <DashboardCharts />
