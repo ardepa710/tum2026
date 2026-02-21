@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { DeleteTaskButton } from "@/components/delete-task-button";
 import { TaskPermissionManager } from "@/components/task-permission-manager";
 import { BookmarkButton } from "@/components/bookmark-button";
+import { CustomFieldsEditor } from "@/components/custom-fields-editor";
 import {
   Cog,
   Code,
@@ -239,6 +240,11 @@ export default async function TaskDetailPage({
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Custom Fields */}
+      <div className="mb-6">
+        <CustomFieldsEditor entityType="task" entityId={String(task.id)} />
       </div>
 
       {/* Permissions Manager */}

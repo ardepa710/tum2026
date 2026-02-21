@@ -1,14 +1,17 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
+import { getSessionRole } from "@/lib/rbac";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { NotificationPrefsForm } from "@/components/notification-prefs-form";
-import { Settings, User, Palette, BellRing, Info } from "lucide-react";
+import { Settings, User, Palette, BellRing, Info, SlidersHorizontal } from "lucide-react";
+import Link from "next/link";
 
 export default async function SettingsPage() {
   const session = await auth();
   const cookieStore = await cookies();
   const theme = cookieStore.get("theme")?.value || "dark";
+  const role = await getSessionRole();
 
   // Fetch or create default notification preferences
   let prefs = session?.user?.id
@@ -104,6 +107,24 @@ export default async function SettingsPage() {
           </div>
           <NotificationPrefsForm initialPrefs={notificationPrefs} />
         </div>
+
+        {/* Custom Fields (Admin only) */}
+        {role === "ADMIN" && (
+          <Link
+            href="/dashboard/settings/custom-fields"
+            className="block bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-6 hover:border-[var(--accent)] transition-colors"
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <SlidersHorizontal className="w-5 h-5 text-[var(--accent)]" />
+              <h3 className="text-lg font-semibold text-[var(--text-primary)]">
+                Custom Fields
+              </h3>
+            </div>
+            <p className="text-sm text-[var(--text-secondary)]">
+              Define custom fields for tenants and tasks
+            </p>
+          </Link>
+        )}
 
         {/* About Section */}
         <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-6">

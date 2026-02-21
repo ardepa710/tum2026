@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { calculateHealthScore } from "@/lib/health-score";
 import { HealthBadge } from "@/components/health-badge";
 import { BookmarkButton } from "@/components/bookmark-button";
+import { CustomFieldsEditor } from "@/components/custom-fields-editor";
 import {
   Building2,
   Hash,
@@ -243,6 +244,9 @@ export default async function TenantDetailPage({
           </div>
         </div>
       </div>
+
+      {/* Custom Fields */}
+      <CustomFieldsEditor entityType="tenant" entityId={String(tenant.id)} />
     </div>
   );
 }
