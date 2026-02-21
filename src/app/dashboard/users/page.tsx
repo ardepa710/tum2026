@@ -1,7 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { TenantUsers } from "@/components/tenant-users";
+import { getSessionRole } from "@/lib/rbac";
 
 export default async function UsersPage() {
+  const role = await getSessionRole();
   const tenants = await prisma.tenant.findMany({
     select: {
       id: true,
@@ -19,7 +21,7 @@ export default async function UsersPage() {
           Browse Active Directory users across your managed tenants
         </p>
       </div>
-      <TenantUsers tenants={tenants} />
+      <TenantUsers tenants={tenants} role={role} />
     </div>
   );
 }

@@ -29,7 +29,7 @@ type TenantOption = {
   tenantAbbrv: string;
 };
 
-export function TenantUsers({ tenants }: { tenants: TenantOption[] }) {
+export function TenantUsers({ tenants, role }: { tenants: TenantOption[]; role: string }) {
   const [selectedTenantId, setSelectedTenantId] = useState("");
   const [users, setUsers] = useState<ADUser[]>([]);
   const [loading, setLoading] = useState(false);
@@ -284,6 +284,7 @@ export function TenantUsers({ tenants }: { tenants: TenantOption[] }) {
           tenantId={selectedTenantId}
           userId={selectedUser.id}
           userName={selectedUser.displayName}
+          role={role}
           onClose={() => setSelectedUser(null)}
         />
       )}

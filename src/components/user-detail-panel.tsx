@@ -26,8 +26,10 @@ import {
   UserCheck,
   RefreshCw,
   ChevronDown,
+  Monitor,
 } from "lucide-react";
 import { BookmarkButton } from "@/components/bookmark-button";
+import { UserDeviceSection } from "@/components/user-device-section";
 import type {
   UserDetailResponse,
   MemberOfEntry,
@@ -52,6 +54,7 @@ type UserDetailPanelProps = {
   tenantId: string;
   userId: string;
   userName: string;
+  role: string;
   onClose: () => void;
 };
 
@@ -59,6 +62,7 @@ export function UserDetailPanel({
   tenantId,
   userId,
   userName,
+  role,
   onClose,
 }: UserDetailPanelProps) {
   const [data, setData] = useState<UserDetailResponse | null>(null);
@@ -303,7 +307,7 @@ export function UserDetailPanel({
           <div className="flex-1 overflow-y-auto">
             {loading && <SkeletonBody />}
             {error && !loading && <ErrorState message={error} />}
-            {data && !loading && !error && <DetailBody data={data} />}
+            {data && !loading && !error && <DetailBody data={data} tenantId={tenantId} role={role} />}
           </div>
         </div>
       </div>
@@ -315,7 +319,7 @@ export function UserDetailPanel({
 
 /* ─── Detail Body ─── */
 
-function DetailBody({ data }: { data: UserDetailResponse }) {
+function DetailBody({ data, tenantId, role }: { data: UserDetailResponse; tenantId: string; role: string }) {
   const { user, memberOf, licenses, mailboxSettings, manager } = data;
 
   return (
@@ -376,6 +380,16 @@ function DetailBody({ data }: { data: UserDetailResponse }) {
             value={formatDate(user.signInActivity.lastSignInDateTime)}
           />
         )}
+      </Section>
+
+      {/* Devices (RMM) */}
+      <Section title="Devices" icon={<Monitor className="w-4 h-4" />}>
+        <UserDeviceSection
+          tenantId={tenantId}
+          userUpn={user.userPrincipalName}
+          userName={user.displayName}
+          role={role}
+        />
       </Section>
 
       {/* Manager */}
