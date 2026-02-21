@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { calculateHealthScore } from "@/lib/health-score";
 import { HealthBadge } from "@/components/health-badge";
+import { BookmarkButton } from "@/components/bookmark-button";
+import { CustomFieldsEditor } from "@/components/custom-fields-editor";
 import {
   Building2,
   Hash,
@@ -51,9 +53,17 @@ export default async function TenantDetailPage({
             <Building2 className="w-7 h-7" style={{ color: "var(--accent)" }} />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-[var(--text-primary)]">
-              {tenant.tenantName}
-            </h2>
+            <div className="flex items-center gap-1">
+              <h2 className="text-2xl font-bold text-[var(--text-primary)]">
+                {tenant.tenantName}
+              </h2>
+              <BookmarkButton
+                entityType="tenant"
+                entityId={String(tenant.id)}
+                label={tenant.tenantName}
+                metadata={{ abbrv: tenant.tenantAbbrv }}
+              />
+            </div>
             <div className="flex items-center gap-1.5 mt-1">
               <Hash className="w-3.5 h-3.5 text-[var(--text-muted)]" />
               <span className="text-sm text-[var(--text-secondary)] font-mono">
@@ -234,6 +244,9 @@ export default async function TenantDetailPage({
           </div>
         </div>
       </div>
+
+      {/* Custom Fields */}
+      <CustomFieldsEditor entityType="tenant" entityId={String(tenant.id)} />
     </div>
   );
 }

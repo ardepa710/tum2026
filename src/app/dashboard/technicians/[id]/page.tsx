@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { DeleteTechnicianButton } from "@/components/delete-technician-button";
+import { BookmarkButton } from "@/components/bookmark-button";
 import {
   UserRound,
   Mail,
@@ -71,6 +72,12 @@ export default async function TechnicianDetailPage({
               <h2 className="text-2xl font-bold text-[var(--text-primary)]">
                 {technician.displayName}
               </h2>
+              <BookmarkButton
+                entityType="technician"
+                entityId={String(technician.id)}
+                label={technician.displayName}
+                metadata={{ email: technician.email }}
+              />
               {technician.accountEnabled ? (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[var(--success)]/10 text-[var(--success)] text-xs rounded-md">
                   <CheckCircle2 className="w-3 h-3" />

@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { logAudit, getActor } from "@/lib/audit";
 import { requireRole } from "@/lib/rbac";
+import { broadcastEvent } from "@/lib/sse";
 
 export async function createTenant(
   _prevState: { error: string },
@@ -44,6 +45,7 @@ export async function createTenant(
   }
 
   logAudit({ actor: session.user.email, action: "CREATE", entity: "TENANT", entityId: newTenant.id, details: { tenantName, tenantAbbrv } });
+  broadcastEvent("tenant-update", { action: "create", tenantId: newTenant.id, tenantName });
   redirect("/dashboard/tenants");
 }
 
@@ -84,5 +86,6 @@ export async function deleteTenant(id: number) {
   const tenant = await prisma.tenant.findUnique({ where: { id }, select: { tenantName: true } });
   await prisma.tenant.delete({ where: { id } });
   logAudit({ actor, action: "DELETE", entity: "TENANT", entityId: id, details: { tenantName: tenant?.tenantName } });
+  broadcastEvent("tenant-update", { action: "delete", tenantId: id });
   redirect("/dashboard/tenants");
 }

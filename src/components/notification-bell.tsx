@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Bell, CheckCheck, ExternalLink } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useSSE } from "@/hooks/use-sse";
 
 interface Notification {
   id: number;
@@ -36,6 +37,15 @@ export function NotificationBell() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
+  // SSE: real-time notification updates
+  useSSE({
+    notification: (data) => {
+      const notif = data as Notification;
+      setNotifications((prev) => [notif, ...prev].slice(0, 10));
+      setUnreadCount((prev) => prev + 1);
+    },
+  });
+
   // Fetch unread count
   const fetchUnreadCount = useCallback(async () => {
     try {
@@ -47,10 +57,10 @@ export function NotificationBell() {
     }
   }, []);
 
-  // Poll unread count every 30 seconds
+  // Poll unread count every 60 seconds (SSE handles real-time, polling is fallback)
   useEffect(() => {
     fetchUnreadCount();
-    const interval = setInterval(fetchUnreadCount, 30000);
+    const interval = setInterval(fetchUnreadCount, 60000);
     return () => clearInterval(interval);
   }, [fetchUnreadCount]);
 

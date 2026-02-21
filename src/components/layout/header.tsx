@@ -5,7 +5,7 @@ import { GlobalSearch } from "@/components/global-search";
 import { NotificationBell } from "@/components/notification-bell";
 import { MobileMenuButton } from "@/components/layout/mobile-menu-button";
 
-export async function Header() {
+export async function Header({ role }: { role?: string }) {
   const session = await auth();
   const cookieStore = await cookies();
   const theme = cookieStore.get("theme")?.value || "dark";
@@ -16,7 +16,7 @@ export async function Header() {
       <div className="flex items-center gap-3">
         <MobileMenuButton />
         <div className="hidden sm:block">
-          <GlobalSearch />
+          <GlobalSearch role={role} />
         </div>
       </div>
 

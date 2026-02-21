@@ -78,6 +78,8 @@ model User {
   userPermissions UserPermission[]
   notifications        Notification[]
   notificationPref     NotificationPreference?
+  searchHistory        SearchHistory[]
+  bookmarks            Bookmark[]
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 }
@@ -91,8 +93,9 @@ model Tenant {
   domainUrl       String?          @map("domain_url")
   regDttm         DateTime         @default(now()) @map("reg_dttm")
   regUser         String           @map("reg_user")
-  automationTasks AutomationTask[]
-  taskRuns        TaskRun[]
+  automationTasks   AutomationTask[]
+  taskRuns          TaskRun[]
+  securitySnapshots SecuritySnapshot[]
 
   @@map("tenants")
 }
@@ -266,4 +269,75 @@ model Runbook {
   updatedAt DateTime    @updatedAt @map("updated_at")
 
   @@map("tbmrunbooks")
+}
+
+model SearchHistory {
+  id           Int      @id @default(autoincrement())
+  userId       String   @map("user_id")
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  query        String
+  resultType   String   @map("result_type")
+  resultId     String   @map("result_id")
+  clickedLabel String   @map("clicked_label")
+  searchedAt   DateTime @default(now()) @map("searched_at")
+
+  @@index([userId, searchedAt])
+  @@map("tbmsearch_history")
+}
+
+model SecuritySnapshot {
+  id         Int      @id @default(autoincrement())
+  tenantId   Int      @map("tenant_id")
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  score      Int
+  checksJson String   @map("checks_json") @db.Text
+  capturedAt DateTime @default(now()) @map("captured_at")
+
+  @@index([tenantId, capturedAt])
+  @@map("tbmsecurity_snapshots")
+}
+
+model CustomField {
+  id         Int                @id @default(autoincrement())
+  entityType String             @map("entity_type")
+  fieldName  String             @map("field_name")
+  fieldType  String             @map("field_type")
+  options    String?            @db.Text
+  sortOrder  Int                @default(0) @map("sort_order")
+  isRequired Boolean            @default(false) @map("is_required")
+  createdBy  String             @map("created_by")
+  createdAt  DateTime           @default(now()) @map("created_at")
+  values     CustomFieldValue[]
+
+  @@map("tbmcustom_fields")
+}
+
+model CustomFieldValue {
+  id         Int         @id @default(autoincrement())
+  fieldId    Int         @map("field_id")
+  field      CustomField @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  entityType String      @map("entity_type")
+  entityId   String      @map("entity_id")
+  value      String      @db.Text
+  updatedBy  String      @map("updated_by")
+  updatedAt  DateTime    @updatedAt @map("updated_at")
+
+  @@unique([fieldId, entityType, entityId])
+  @@index([entityType, entityId])
+  @@map("tbmcustom_field_values")
+}
+
+model Bookmark {
+  id         Int      @id @default(autoincrement())
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id")
+  label      String
+  metadata   String?  @db.Text
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, entityType, entityId])
+  @@index([userId])
+  @@map("tbmbookmarks")
 }

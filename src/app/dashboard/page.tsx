@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ActionBadge } from "@/components/action-badge";
 import { AlertBanner } from "@/components/alert-banner";
 import { DashboardCharts } from "@/components/dashboard-charts";
+import { FavoritesWidget } from "@/components/favorites-widget";
 import { getSessionRole, hasMinRole } from "@/lib/rbac";
 import {
   Building2,
@@ -194,8 +195,8 @@ export default async function DashboardPage() {
           )}
         </div>
 
-        {/* Quick Actions */}
-        {hasMinRole(role, "EDITOR") && (
+        {/* Quick Actions (EDITOR+) or Favorites Widget (VIEWER) */}
+        {hasMinRole(role, "EDITOR") ? (
           <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-5">
             <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
               Quick Actions
@@ -220,8 +221,17 @@ export default async function DashboardPage() {
               })}
             </div>
           </div>
+        ) : (
+          <FavoritesWidget />
         )}
       </div>
+
+      {/* Favorites Widget (EDITOR+ sees it below, VIEWER sees it in the grid above) */}
+      {hasMinRole(role, "EDITOR") && (
+        <div className="mt-6">
+          <FavoritesWidget />
+        </div>
+      )}
     </div>
   );
 }

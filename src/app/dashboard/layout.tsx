@@ -14,7 +14,7 @@ export default async function DashboardLayout({
     <div className="min-h-screen">
       <Sidebar role={role} />
       <div className="md:ml-16 lg:ml-[260px] pb-16 md:pb-0">
-        <Header />
+        <Header role={role} />
         <main className="p-6">{children}</main>
       </div>
       <BottomNav />

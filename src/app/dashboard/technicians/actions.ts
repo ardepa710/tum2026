@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { logAudit, getActor } from "@/lib/audit";
 import { requireRole } from "@/lib/rbac";
+import { broadcastEvent } from "@/lib/sse";
 
 const SENTINEL_EDGE_TENANT_ID = 10;
 const TUM_APP_GROUP_NAME = "TUM APP";
@@ -73,6 +74,7 @@ export async function syncTechnicians() {
     revalidatePath("/dashboard/technicians");
 
     logAudit({ actor, action: "SYNC", entity: "TECHNICIAN", details: { count: syncedCount, groupName: TUM_APP_GROUP_NAME } });
+    broadcastEvent("tenant-update", { action: "tech-sync", count: syncedCount });
     return {
       success: true,
       message: `Synced ${syncedCount} technician(s) successfully.`,

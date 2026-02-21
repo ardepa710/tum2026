@@ -27,6 +27,7 @@ import {
   RefreshCw,
   ChevronDown,
 } from "lucide-react";
+import { BookmarkButton } from "@/components/bookmark-button";
 import type {
   UserDetailResponse,
   MemberOfEntry,
@@ -196,6 +197,12 @@ export function UserDetailPanel({
                   {data.user.accountEnabled ? "Enabled" : "Disabled"}
                 </span>
               )}
+              <BookmarkButton
+                entityType="ad_user"
+                entityId={`${tenantId}:${userId}`}
+                label={userName}
+                metadata={{ email: data?.user?.mail }}
+              />
               <button
                 onClick={handleClose}
                 className="p-1.5 rounded-lg text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] transition-colors"
