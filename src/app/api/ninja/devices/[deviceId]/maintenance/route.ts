@@ -25,7 +25,10 @@ export async function PUT(
 
   try {
     const body = await request.json();
-    const endTime: number = body.endTime;
+    const endTime = Number(body.endTime);
+    if (isNaN(endTime) || endTime <= Date.now()) {
+      return NextResponse.json({ error: "Invalid or past endTime" }, { status: 400 });
+    }
     const reason: string | undefined = body.reason || undefined;
     const disabledFeatures: string[] | undefined = body.disabledFeatures || undefined;
 

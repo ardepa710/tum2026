@@ -25,7 +25,10 @@ export async function POST(
 
   try {
     const body = await request.json();
-    const type: "os" | "software" | "both" = body.type || "both";
+    const type = body.type || "both";
+    if (!["os", "software", "both"].includes(type)) {
+      return NextResponse.json({ error: "Invalid type. Must be os, software, or both" }, { status: 400 });
+    }
 
     if (type === "os") {
       await applyOsPatches(deviceId);

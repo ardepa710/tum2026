@@ -209,6 +209,12 @@ export function NinjaDeviceDetail({
     svcId: string,
     action: "START" | "STOP" | "RESTART",
   ) => {
+    // Confirm destructive service actions
+    if (action === "STOP" || action === "RESTART") {
+      if (!window.confirm(`Are you sure you want to ${action.toLowerCase()} this service?`)) {
+        return;
+      }
+    }
     setServiceControl((prev) => ({
       ...prev,
       [svcId]: { loading: true, feedback: null },
