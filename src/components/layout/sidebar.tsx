@@ -24,7 +24,49 @@ import {
   LogOut,
   Shield,
   X,
+  Star,
+  ChevronRight,
+  User,
 } from "lucide-react";
+
+type SidebarBookmark = {
+  id: number;
+  entityType: string;
+  entityId: string;
+  label: string;
+};
+
+const SIDEBAR_TYPE_ICONS: Record<string, typeof Building2> = {
+  tenant: Building2,
+  task: Cog,
+  runbook: BookOpen,
+  technician: Wrench,
+  ad_user: User,
+  ad_group: UsersRound,
+};
+
+function getSidebarHref(entityType: string, entityId: string, label: string): string {
+  switch (entityType) {
+    case "tenant":
+      return `/dashboard/tenants/${entityId}`;
+    case "task":
+      return `/dashboard/tasks/${entityId}`;
+    case "runbook":
+      return `/dashboard/runbooks/${entityId}`;
+    case "technician":
+      return `/dashboard/technicians/${entityId}`;
+    case "ad_user": {
+      const [tenantId] = entityId.split(":");
+      return `/dashboard/users?tenant=${tenantId}&search=${encodeURIComponent(label)}`;
+    }
+    case "ad_group": {
+      const [tenantId] = entityId.split(":");
+      return `/dashboard/groups?tenant=${tenantId}&search=${encodeURIComponent(label)}`;
+    }
+    default:
+      return "/dashboard";
+  }
+}
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -47,6 +89,8 @@ const navItems = [
 export function Sidebar({ role }: { role: Role }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [favoritesOpen, setFavoritesOpen] = useState(false);
+  const [favorites, setFavorites] = useState<SidebarBookmark[]>([]);
 
   const visibleItems = navItems.filter((item) => canAccessPage(role, item.href));
 
@@ -61,6 +105,14 @@ export function Sidebar({ role }: { role: Role }) {
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
+
+  // Fetch favorites for sidebar
+  useEffect(() => {
+    fetch("/api/bookmarks?limit=5")
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: SidebarBookmark[]) => setFavorites(data))
+      .catch(() => setFavorites([]));
+  }, []);
 
   function NavLink({ item, showLabel = true }: { item: (typeof navItems)[number]; showLabel?: boolean }) {
     const isActive =
@@ -105,6 +157,40 @@ export function Sidebar({ role }: { role: Role }) {
             <NavLink key={item.href} item={item} />
           ))}
         </nav>
+        {/* Favorites Section */}
+        {favorites.length > 0 && (
+          <div className="px-4 pb-2 border-t border-[var(--border)]">
+            <button
+              onClick={() => setFavoritesOpen(!favoritesOpen)}
+              className="flex items-center justify-between w-full py-2.5 text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider"
+            >
+              <span className="flex items-center gap-2">
+                <Star className="w-3.5 h-3.5" />
+                Favorites
+              </span>
+              <ChevronRight
+                className={`w-3.5 h-3.5 transition-transform ${favoritesOpen ? "rotate-90" : ""}`}
+              />
+            </button>
+            {favoritesOpen && (
+              <div className="space-y-0.5 pb-2">
+                {favorites.map((fav) => {
+                  const Icon = SIDEBAR_TYPE_ICONS[fav.entityType] || Star;
+                  return (
+                    <Link
+                      key={fav.id}
+                      href={getSidebarHref(fav.entityType, fav.entityId, fav.label)}
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] transition-colors"
+                    >
+                      <Icon className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">{fav.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
         <div className="p-4 border-t border-[var(--border)]">
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
@@ -156,6 +242,41 @@ export function Sidebar({ role }: { role: Role }) {
                 <NavLink key={item.href} item={item} />
               ))}
             </nav>
+            {/* Mobile Favorites Section */}
+            {favorites.length > 0 && (
+              <div className="px-4 pb-2 border-t border-[var(--border)]">
+                <button
+                  onClick={() => setFavoritesOpen(!favoritesOpen)}
+                  className="flex items-center justify-between w-full py-2.5 text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider"
+                >
+                  <span className="flex items-center gap-2">
+                    <Star className="w-3.5 h-3.5" />
+                    Favorites
+                  </span>
+                  <ChevronRight
+                    className={`w-3.5 h-3.5 transition-transform ${favoritesOpen ? "rotate-90" : ""}`}
+                  />
+                </button>
+                {favoritesOpen && (
+                  <div className="space-y-0.5 pb-2">
+                    {favorites.map((fav) => {
+                      const Icon = SIDEBAR_TYPE_ICONS[fav.entityType] || Star;
+                      return (
+                        <Link
+                          key={fav.id}
+                          href={getSidebarHref(fav.entityType, fav.entityId, fav.label)}
+                          onClick={() => setMobileOpen(false)}
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] transition-colors"
+                        >
+                          <Icon className="w-3.5 h-3.5 shrink-0" />
+                          <span className="truncate">{fav.label}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
             <div className="p-4 border-t border-[var(--border)]">
               <button
                 onClick={() => signOut({ callbackUrl: "/login" })}

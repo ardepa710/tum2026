@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionRole, hasMinRole } from "@/lib/rbac";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { DeleteRunbookButton } from "@/components/delete-runbook-button";
+import { BookmarkButton } from "@/components/bookmark-button";
 import {
   BookOpen,
   Pencil,
@@ -54,9 +55,17 @@ export default async function RunbookDetailPage({
             <BookOpen className="w-7 h-7" style={{ color: "var(--accent)" }} />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-[var(--text-primary)]">
-              {runbook.title}
-            </h2>
+            <div className="flex items-center gap-1">
+              <h2 className="text-2xl font-bold text-[var(--text-primary)]">
+                {runbook.title}
+              </h2>
+              <BookmarkButton
+                entityType="runbook"
+                entityId={String(runbook.id)}
+                label={runbook.title}
+                metadata={{ category: runbook.category }}
+              />
+            </div>
             <div className="flex items-center gap-3 mt-1.5">
               {runbook.category && (
                 <span

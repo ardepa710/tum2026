@@ -23,6 +23,7 @@ import {
   Search,
   Code,
 } from "lucide-react";
+import { BookmarkButton } from "@/components/bookmark-button";
 import type {
   GroupDetailResponse,
   GroupMember,
@@ -152,12 +153,19 @@ export function GroupDetailPanel({
                 )}
               </div>
             </div>
-            <button
-              onClick={handleClose}
-              className="p-1.5 rounded-lg text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-1">
+              <BookmarkButton
+                entityType="ad_group"
+                entityId={`${tenantId}:${groupId}`}
+                label={groupName}
+              />
+              <button
+                onClick={handleClose}
+                className="p-1.5 rounded-lg text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           {/* Body */}

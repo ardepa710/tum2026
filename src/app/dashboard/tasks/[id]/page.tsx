@@ -3,6 +3,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { DeleteTaskButton } from "@/components/delete-task-button";
 import { TaskPermissionManager } from "@/components/task-permission-manager";
+import { BookmarkButton } from "@/components/bookmark-button";
 import {
   Cog,
   Code,
@@ -66,9 +67,17 @@ export default async function TaskDetailPage({
             <Cog className="w-7 h-7" style={{ color: "var(--accent)" }} />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-[var(--text-primary)]">
-              {task.taskName}
-            </h2>
+            <div className="flex items-center gap-1">
+              <h2 className="text-2xl font-bold text-[var(--text-primary)]">
+                {task.taskName}
+              </h2>
+              <BookmarkButton
+                entityType="task"
+                entityId={String(task.id)}
+                label={task.taskName}
+                metadata={{ taskCode: task.taskCode }}
+              />
+            </div>
             <div className="flex items-center gap-1.5 mt-1">
               <Code className="w-3.5 h-3.5 text-[var(--text-muted)]" />
               <span className="text-sm text-[var(--text-secondary)] font-mono">
