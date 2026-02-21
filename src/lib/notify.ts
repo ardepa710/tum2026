@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
+import { emitEvent } from "@/lib/sse";
 
-type NotificationCategory = "task_run" | "task_fail" | "tech_sync" | "new_tenant";
+export type NotificationCategory = "task_run" | "task_fail" | "tech_sync" | "new_tenant";
 
 const CATEGORY_TO_PREF = {
   task_run: "onTaskRun",
@@ -32,13 +33,23 @@ export function createNotification(params: {
       // No pref record → defaults are all true → proceed
     }
 
-    await prisma.notification.create({
+    const created = await prisma.notification.create({
       data: {
         userId: params.userId,
         title: params.title,
         body: params.body ?? null,
         link: params.link ?? null,
       },
+    });
+
+    // Emit SSE event for real-time delivery
+    emitEvent(params.userId, "notification", {
+      id: created.id,
+      title: created.title,
+      body: created.body,
+      link: created.link,
+      isRead: false,
+      createdAt: created.createdAt.toISOString(),
     });
   })().catch((err) => {
     console.error("Notification creation failed:", err);
