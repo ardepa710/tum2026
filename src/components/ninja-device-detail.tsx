@@ -1247,10 +1247,12 @@ export function NinjaDeviceDetail({
         ) : (
           <NinjaDeviceAssignment
             deviceId={deviceId}
+            deviceName={device.displayName || device.systemName || `Device #${deviceId}`}
             organizationId={device.organizationId}
             tenantId={linkedTenantId}
             role={role}
             currentAssignment={assignment}
+            onAssignmentChange={(a) => setAssignment(a)}
           />
         )}
       </Section>

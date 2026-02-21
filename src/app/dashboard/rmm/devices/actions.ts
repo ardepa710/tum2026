@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { requireRole } from "@/lib/rbac";
+import { getSessionRole, hasMinRole } from "@/lib/rbac";
 import { getActor, logAudit } from "@/lib/audit";
 import { revalidatePath } from "next/cache";
 
@@ -16,7 +16,10 @@ export async function assignDeviceToUser(
   | { success: false; error: string }
 > {
   try {
-    await requireRole("EDITOR");
+    const role = await getSessionRole();
+    if (!hasMinRole(role, "EDITOR")) {
+      return { success: false, error: "Insufficient permissions" };
+    }
     const actor = await getActor();
 
     const result = await prisma.deviceAssignment.upsert({
@@ -58,7 +61,10 @@ export async function unassignDevice(
   assignmentId: number,
 ): Promise<{ success: true } | { success: false; error: string }> {
   try {
-    await requireRole("EDITOR");
+    const role = await getSessionRole();
+    if (!hasMinRole(role, "EDITOR")) {
+      return { success: false, error: "Insufficient permissions" };
+    }
     const actor = await getActor();
 
     const assignment = await prisma.deviceAssignment.findUnique({

@@ -38,18 +38,22 @@ interface AssignmentData {
 
 interface NinjaDeviceAssignmentProps {
   deviceId: number;
+  deviceName: string;
   organizationId: number;
   tenantId: number | null;
   role: string;
   currentAssignment: AssignmentData | null;
+  onAssignmentChange?: (assignment: AssignmentData | null) => void;
 }
 
 export function NinjaDeviceAssignment({
   deviceId,
+  deviceName,
   organizationId,
   tenantId,
   role,
   currentAssignment,
+  onAssignmentChange,
 }: NinjaDeviceAssignmentProps) {
   const [assignment, setAssignment] = useState<AssignmentData | null>(
     currentAssignment,
@@ -138,19 +142,21 @@ export function NinjaDeviceAssignment({
     const result = await assignDeviceToUser(
       tenantId,
       deviceId,
-      `Device #${deviceId}`,
+      deviceName,
       user.userPrincipalName,
       user.displayName,
     );
 
     if (result.success) {
-      setAssignment({
+      const newAssignment = {
         id: result.assignment.id,
         adUserUpn: result.assignment.adUserUpn,
         adUserName: result.assignment.adUserName,
         assignedAt: new Date(result.assignment.assignedAt).toISOString(),
         assignedBy: result.assignment.assignedBy,
-      });
+      };
+      setAssignment(newAssignment);
+      onAssignmentChange?.(newAssignment);
       setFeedback({ type: "success", message: "User assigned successfully" });
     } else {
       setFeedback({ type: "error", message: result.error });
@@ -170,6 +176,7 @@ export function NinjaDeviceAssignment({
 
     if (result.success) {
       setAssignment(null);
+      onAssignmentChange?.(null);
       setFeedback({ type: "success", message: "User unassigned successfully" });
     } else {
       setFeedback({ type: "error", message: result.error });
