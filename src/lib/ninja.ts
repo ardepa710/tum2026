@@ -19,7 +19,7 @@ import type {
 
 const NINJA_CLIENT_ID = process.env.NINJA_CLIENT_ID!;
 const NINJA_CLIENT_SECRET = process.env.NINJA_CLIENT_SECRET!;
-const NINJA_SCOPE = process.env.NINJA_SCOPE ?? "management";
+const NINJA_SCOPE = process.env.NINJA_SCOPE ?? "monitoring management";
 const NINJA_BASE_URL =
   process.env.NINJA_BASE_URL ?? "https://app.ninjarmm.com";
 
