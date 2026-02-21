@@ -199,14 +199,14 @@ export function NinjaDeviceDetail({
   const [alerts, setAlerts] = useState<NinjaAlert[] | null>(null);
   const [alertsLoading, setAlertsLoading] = useState(false);
 
-  // Assignment state
+  // Assignment state (undefined = not loaded, null = loaded but none)
   const [assignment, setAssignment] = useState<{
     id: number;
     adUserUpn: string;
     adUserName: string;
     assignedAt: string;
     assignedBy: string;
-  } | null>(null);
+  } | null | undefined>(undefined);
   const [linkedTenantId, setLinkedTenantId] = useState<number | null>(null);
   const [assignmentLoading, setAssignmentLoading] = useState(false);
 
@@ -366,7 +366,7 @@ export function NinjaDeviceDetail({
   useEffect(() => {
     if (
       openSections.has("assignment") &&
-      !assignment &&
+      assignment === undefined &&
       !assignmentLoading &&
       device
     ) {
@@ -1251,7 +1251,7 @@ export function NinjaDeviceDetail({
             organizationId={device.organizationId}
             tenantId={linkedTenantId}
             role={role}
-            currentAssignment={assignment}
+            currentAssignment={assignment ?? null}
             onAssignmentChange={(a) => setAssignment(a)}
           />
         )}
