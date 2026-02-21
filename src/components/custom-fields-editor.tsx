@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { SlidersHorizontal, Check, Loader2 } from "lucide-react";
+import { SlidersHorizontal, Check, Loader2, X } from "lucide-react";
 
 interface FieldWithValue {
   fieldId: number;
@@ -21,15 +21,20 @@ export function CustomFieldsEditor({
 }) {
   const [fields, setFields] = useState<FieldWithValue[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [values, setValues] = useState<Record<number, string>>({});
   const [saving, setSaving] = useState<Record<number, boolean>>({});
   const [saved, setSaved] = useState<Record<number, boolean>>({});
+  const [saveError, setSaveError] = useState<Record<number, boolean>>({});
 
   useEffect(() => {
     fetch(
       `/api/custom-fields/values?entityType=${entityType}&entityId=${entityId}`
     )
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error("Failed to load");
+        return r.json();
+      })
       .then((data: FieldWithValue[]) => {
         setFields(data);
         const vals: Record<number, string> = {};
@@ -39,12 +44,16 @@ export function CustomFieldsEditor({
         setValues(vals);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => {
+        setError("Failed to load custom fields");
+        setLoading(false);
+      });
   }, [entityType, entityId]);
 
   const handleSave = async (fieldId: number) => {
     setSaving((prev) => ({ ...prev, [fieldId]: true }));
     setSaved((prev) => ({ ...prev, [fieldId]: false }));
+    setSaveError((prev) => ({ ...prev, [fieldId]: false }));
     try {
       const res = await fetch("/api/custom-fields/values", {
         method: "PUT",
@@ -61,6 +70,12 @@ export function CustomFieldsEditor({
         setTimeout(
           () => setSaved((prev) => ({ ...prev, [fieldId]: false })),
           2000
+        );
+      } else {
+        setSaveError((prev) => ({ ...prev, [fieldId]: true }));
+        setTimeout(
+          () => setSaveError((prev) => ({ ...prev, [fieldId]: false })),
+          3000
         );
       }
     } finally {
@@ -81,6 +96,23 @@ export function CustomFieldsEditor({
           </h3>
         </div>
         <div className="text-sm text-[var(--text-muted)]">Loading...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-5">
+        <div className="flex items-center gap-2 mb-3">
+          <SlidersHorizontal
+            className="w-5 h-5"
+            style={{ color: "var(--accent)" }}
+          />
+          <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+            Custom Fields
+          </h3>
+        </div>
+        <div className="text-sm text-[var(--error)]">{error}</div>
       </div>
     );
   }
@@ -154,6 +186,8 @@ export function CustomFieldsEditor({
             >
               {saving[field.fieldId] ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
+              ) : saveError[field.fieldId] ? (
+                <X className="w-4 h-4 text-[var(--error)]" />
               ) : saved[field.fieldId] ? (
                 <Check className="w-4 h-4 text-[var(--success)]" />
               ) : (

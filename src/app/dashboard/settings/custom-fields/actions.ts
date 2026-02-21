@@ -15,7 +15,10 @@ export async function createCustomField(
   const entityType = (formData.get("entityType") as string)?.trim();
   const fieldName = (formData.get("fieldName") as string)?.trim();
   const fieldType = (formData.get("fieldType") as string)?.trim();
-  const options = (formData.get("options") as string)?.trim() || null;
+  const rawOptions = (formData.get("options") as string)?.trim() || null;
+  const options = rawOptions
+    ? rawOptions.split(",").map((o) => o.trim()).filter(Boolean).join(",")
+    : null;
   const isRequired = formData.get("isRequired") === "true";
 
   if (!entityType || !fieldName || !fieldType) {
@@ -61,12 +64,15 @@ export async function createCustomField(
 export async function deleteCustomField(id: number) {
   await requireRole("ADMIN");
   const actor = await getActor();
+  const field = await prisma.customField.findUnique({ where: { id } });
+  if (!field) redirect("/dashboard/settings/custom-fields");
   await prisma.customField.delete({ where: { id } });
   logAudit({
     actor,
     action: "DELETE",
     entity: "CUSTOM_FIELD",
     entityId: id,
+    details: { fieldName: field.fieldName, entityType: field.entityType },
   });
   redirect("/dashboard/settings/custom-fields");
 }

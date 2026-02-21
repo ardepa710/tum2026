@@ -20,10 +20,11 @@ export function CustomFieldForm() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+          <label htmlFor="cf-entityType" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
             Entity Type
           </label>
           <select
+            id="cf-entityType"
             name="entityType"
             className="w-full bg-[var(--bg-primary)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
           >
@@ -33,10 +34,11 @@ export function CustomFieldForm() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+          <label htmlFor="cf-fieldName" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
             Field Name
           </label>
           <input
+            id="cf-fieldName"
             type="text"
             name="fieldName"
             required
@@ -47,10 +49,11 @@ export function CustomFieldForm() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+          <label htmlFor="cf-fieldType" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
             Field Type
           </label>
           <select
+            id="cf-fieldType"
             name="fieldType"
             value={fieldType}
             onChange={(e) => setFieldType(e.target.value)}
@@ -64,9 +67,10 @@ export function CustomFieldForm() {
         </div>
 
         <div>
-          <label className="flex items-center gap-2 mt-6">
+          <label htmlFor="cf-isRequired" className="flex items-center gap-2 mt-6">
             <input type="hidden" name="isRequired" value="false" />
             <input
+              id="cf-isRequired"
               type="checkbox"
               name="isRequired"
               value="true"
@@ -81,10 +85,11 @@ export function CustomFieldForm() {
 
       {fieldType === "select" && (
         <div>
-          <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+          <label htmlFor="cf-options" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
             Options (comma-separated)
           </label>
           <input
+            id="cf-options"
             type="text"
             name="options"
             placeholder="e.g., Low, Medium, High, Critical"
