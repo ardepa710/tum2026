@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/rbac";
 import { logAudit, getActor } from "@/lib/audit";
 import { redirect } from "next/navigation";
+import { broadcastEvent } from "@/lib/sse";
 
 export async function createCustomField(
   _prevState: { error: string },
@@ -58,6 +59,7 @@ export async function createCustomField(
     entityId: field.id,
     details: { fieldName, entityType, fieldType },
   });
+  broadcastEvent("custom-field-update", { entityType, fieldId: field.id });
   redirect("/dashboard/settings/custom-fields");
 }
 
@@ -74,5 +76,6 @@ export async function deleteCustomField(id: number) {
     entityId: id,
     details: { fieldName: field.fieldName, entityType: field.entityType },
   });
+  broadcastEvent("custom-field-update", { entityType: field.entityType, fieldId: id, deleted: true });
   redirect("/dashboard/settings/custom-fields");
 }

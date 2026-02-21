@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { emitEvent } from "@/lib/sse";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -77,6 +78,8 @@ export async function POST(req: NextRequest) {
     },
   });
 
+  emitEvent(session.user.id, "bookmark-update", { action: "create", bookmark });
+
   return NextResponse.json(bookmark);
 }
 
@@ -94,6 +97,8 @@ export async function DELETE(req: NextRequest) {
   await prisma.bookmark.deleteMany({
     where: { userId: session.user.id, entityType, entityId },
   });
+
+  emitEvent(session.user.id, "bookmark-update", { action: "delete", entityType, entityId });
 
   return NextResponse.json({ ok: true });
 }

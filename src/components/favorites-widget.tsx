@@ -12,6 +12,7 @@ import {
   UsersRound,
   Loader2,
 } from "lucide-react";
+import { useSSE } from "@/hooks/use-sse";
 
 type Bookmark = {
   id: number;
@@ -74,6 +75,15 @@ export function FavoritesWidget() {
       .catch(() => setBookmarks([]))
       .finally(() => setLoading(false));
   }, []);
+
+  useSSE({
+    "bookmark-update": () => {
+      fetch("/api/bookmarks?limit=10")
+        .then((r) => r.ok ? r.json() : [])
+        .then((data) => setBookmarks(data))
+        .catch(() => {});
+    },
+  });
 
   return (
     <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-5">

@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { calculateSecurityScore, clearScoreCache } from "@/lib/security-score";
 import { logAudit, getActor } from "@/lib/audit";
+import { broadcastEvent } from "@/lib/sse";
 
 // POST — Capture a new security snapshot (ADMIN only)
 export async function POST(req: NextRequest) {
@@ -52,6 +53,8 @@ export async function POST(req: NextRequest) {
     entityId: snapshot.id,
     details: { tenantId: tenant.id, score: scoreResult.totalScore },
   });
+
+  broadcastEvent("security-snapshot", { tenantId: tenant.id, score: scoreResult.totalScore });
 
   return NextResponse.json({
     id: snapshot.id,
