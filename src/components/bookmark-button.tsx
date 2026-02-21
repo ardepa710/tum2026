@@ -11,13 +11,6 @@ type BookmarkButtonProps = {
   className?: string;
 };
 
-type BookmarkRecord = {
-  id: number;
-  entityType: string;
-  entityId: string;
-  label: string;
-};
-
 export function BookmarkButton({
   entityType,
   entityId,
@@ -33,14 +26,10 @@ export function BookmarkButton({
   useEffect(() => {
     let cancelled = false;
 
-    fetch("/api/bookmarks?limit=100")
-      .then((res) => (res.ok ? res.json() : []))
-      .then((bookmarks: BookmarkRecord[]) => {
-        if (cancelled) return;
-        const found = bookmarks.some(
-          (b) => b.entityType === entityType && b.entityId === entityId
-        );
-        setBookmarked(found);
+    fetch(`/api/bookmarks?check=${encodeURIComponent(entityType)}:${encodeURIComponent(entityId)}`)
+      .then((res) => (res.ok ? res.json() : { bookmarked: false }))
+      .then((data: { bookmarked: boolean }) => {
+        if (!cancelled) setBookmarked(data.bookmarked);
       })
       .catch(() => {})
       .finally(() => {

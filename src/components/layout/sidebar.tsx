@@ -86,6 +86,54 @@ const navItems = [
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
+function FavoritesSection({
+  favorites,
+  isOpen,
+  onToggle,
+  onLinkClick,
+}: {
+  favorites: SidebarBookmark[];
+  isOpen: boolean;
+  onToggle: () => void;
+  onLinkClick?: () => void;
+}) {
+  if (favorites.length === 0) return null;
+  return (
+    <div className="px-4 pb-2 border-t border-[var(--border)]">
+      <button
+        onClick={onToggle}
+        className="flex items-center justify-between w-full py-2.5 text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider"
+      >
+        <span className="flex items-center gap-2">
+          <Star className="w-3.5 h-3.5" />
+          Favorites
+        </span>
+        <ChevronRight
+          className={`w-3.5 h-3.5 transition-transform ${isOpen ? "rotate-90" : ""}`}
+        />
+      </button>
+      {isOpen && (
+        <div className="space-y-0.5 pb-2">
+          {favorites.map((fav) => {
+            const Icon = SIDEBAR_TYPE_ICONS[fav.entityType] || Star;
+            return (
+              <Link
+                key={fav.id}
+                href={getSidebarHref(fav.entityType, fav.entityId, fav.label)}
+                onClick={onLinkClick}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] transition-colors"
+              >
+                <Icon className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">{fav.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function Sidebar({ role }: { role: Role }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -157,40 +205,11 @@ export function Sidebar({ role }: { role: Role }) {
             <NavLink key={item.href} item={item} />
           ))}
         </nav>
-        {/* Favorites Section */}
-        {favorites.length > 0 && (
-          <div className="px-4 pb-2 border-t border-[var(--border)]">
-            <button
-              onClick={() => setFavoritesOpen(!favoritesOpen)}
-              className="flex items-center justify-between w-full py-2.5 text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider"
-            >
-              <span className="flex items-center gap-2">
-                <Star className="w-3.5 h-3.5" />
-                Favorites
-              </span>
-              <ChevronRight
-                className={`w-3.5 h-3.5 transition-transform ${favoritesOpen ? "rotate-90" : ""}`}
-              />
-            </button>
-            {favoritesOpen && (
-              <div className="space-y-0.5 pb-2">
-                {favorites.map((fav) => {
-                  const Icon = SIDEBAR_TYPE_ICONS[fav.entityType] || Star;
-                  return (
-                    <Link
-                      key={fav.id}
-                      href={getSidebarHref(fav.entityType, fav.entityId, fav.label)}
-                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] transition-colors"
-                    >
-                      <Icon className="w-3.5 h-3.5 shrink-0" />
-                      <span className="truncate">{fav.label}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
+        <FavoritesSection
+          favorites={favorites}
+          isOpen={favoritesOpen}
+          onToggle={() => setFavoritesOpen(!favoritesOpen)}
+        />
         <div className="p-4 border-t border-[var(--border)]">
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
@@ -242,41 +261,12 @@ export function Sidebar({ role }: { role: Role }) {
                 <NavLink key={item.href} item={item} />
               ))}
             </nav>
-            {/* Mobile Favorites Section */}
-            {favorites.length > 0 && (
-              <div className="px-4 pb-2 border-t border-[var(--border)]">
-                <button
-                  onClick={() => setFavoritesOpen(!favoritesOpen)}
-                  className="flex items-center justify-between w-full py-2.5 text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider"
-                >
-                  <span className="flex items-center gap-2">
-                    <Star className="w-3.5 h-3.5" />
-                    Favorites
-                  </span>
-                  <ChevronRight
-                    className={`w-3.5 h-3.5 transition-transform ${favoritesOpen ? "rotate-90" : ""}`}
-                  />
-                </button>
-                {favoritesOpen && (
-                  <div className="space-y-0.5 pb-2">
-                    {favorites.map((fav) => {
-                      const Icon = SIDEBAR_TYPE_ICONS[fav.entityType] || Star;
-                      return (
-                        <Link
-                          key={fav.id}
-                          href={getSidebarHref(fav.entityType, fav.entityId, fav.label)}
-                          onClick={() => setMobileOpen(false)}
-                          className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] transition-colors"
-                        >
-                          <Icon className="w-3.5 h-3.5 shrink-0" />
-                          <span className="truncate">{fav.label}</span>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
+            <FavoritesSection
+              favorites={favorites}
+              isOpen={favoritesOpen}
+              onToggle={() => setFavoritesOpen(!favoritesOpen)}
+              onLinkClick={() => setMobileOpen(false)}
+            />
             <div className="p-4 border-t border-[var(--border)]">
               <button
                 onClick={() => signOut({ callbackUrl: "/login" })}
