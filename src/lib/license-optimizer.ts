@@ -30,7 +30,7 @@ const SKU_PRICES: Record<string, { friendlyName: string; price: number }> = {
   MICROSOFT_BUSINESS_CENTER: { friendlyName: "Microsoft Business Center", price: 0 },
 };
 
-function formatSkuName(skuPartNumber: string): string {
+export function formatSkuName(skuPartNumber: string): string {
   const entry = SKU_PRICES[skuPartNumber];
   if (entry) return entry.friendlyName;
   return skuPartNumber.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
@@ -50,22 +50,27 @@ export async function analyzeOptimization(
   if (cache && cache.expiresAt > Date.now()) return cache.data;
 
   const recommendations: LicenseRecommendation[] = [];
+  const failedTenants: string[] = [];
   let analyzedSkus = 0;
 
   const results = await Promise.allSettled(
     tenants.map(async (tenant) => {
       try {
         const licenses = await getLicenses(tenant.id);
-        return { tenant, licenses };
+        return { tenant, licenses, failed: false };
       } catch {
-        return { tenant, licenses: [] };
+        return { tenant, licenses: [], failed: true };
       }
     })
   );
 
   for (const result of results) {
     if (result.status !== "fulfilled") continue;
-    const { tenant, licenses } = result.value;
+    const { tenant, licenses, failed } = result.value;
+    if (failed) {
+      failedTenants.push(tenant.tenantAbbrv);
+      continue;
+    }
 
     for (const license of licenses) {
       const enabled = license.prepaidUnits?.enabled ?? 0;
@@ -114,6 +119,7 @@ export async function analyzeOptimization(
     recommendations,
     analyzedTenants: tenants.length,
     analyzedSkus,
+    failedTenants,
   };
 
   cache = { data: summary, expiresAt: Date.now() + CACHE_TTL };

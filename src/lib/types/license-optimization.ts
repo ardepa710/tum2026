@@ -23,4 +23,5 @@ export interface OptimizationSummary {
   recommendations: LicenseRecommendation[];
   analyzedTenants: number;
   analyzedSkus: number;
+  failedTenants: string[];
 }

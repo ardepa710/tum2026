@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { CreditCard, ChevronDown, ChevronUp, Loader2, TrendingDown } from "lucide-react";
+import { CreditCard, ChevronDown, ChevronUp, Loader2, TrendingDown, AlertTriangle } from "lucide-react";
 import type { OptimizationSummary } from "@/lib/types/license-optimization";
+import { formatSkuName } from "@/lib/license-optimizer";
 
 type TenantLicense = {
   skuId: string;
@@ -31,12 +32,6 @@ type AggregatedSku = {
     consumed: number;
   }[];
 };
-
-function formatSkuName(skuPartNumber: string): string {
-  return skuPartNumber
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
-}
 
 export function LicenseDashboard({ tenants }: { tenants: TenantInfo[] }) {
   const [aggregated, setAggregated] = useState<AggregatedSku[]>([]);
@@ -236,6 +231,16 @@ export function LicenseDashboard({ tenants }: { tenants: TenantInfo[] }) {
               </div>
             ) : (
               <>
+                {/* Failed tenants warning */}
+                {optimization.failedTenants && optimization.failedTenants.length > 0 && (
+                  <div className="flex items-center gap-2 rounded-lg px-4 py-2.5 mb-3 bg-[var(--warning)]/10 border border-[var(--warning)]/30">
+                    <AlertTriangle className="w-4 h-4 text-[var(--warning)] shrink-0" />
+                    <p className="text-xs text-[var(--warning)]">
+                      Could not analyze: {optimization.failedTenants.join(", ")}
+                    </p>
+                  </div>
+                )}
+
                 {/* Summary card */}
                 <div
                   className="rounded-lg px-4 py-3 mb-4 border"
