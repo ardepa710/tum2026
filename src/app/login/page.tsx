@@ -1,11 +1,30 @@
 "use client";
 
 import { signIn } from "next-auth/react";
-import { Shield } from "lucide-react";
+import { Shield, AlertCircle } from "lucide-react";
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
-export default function LoginPage() {
+const ERROR_MESSAGES: Record<string, string> = {
+  OAuthSignin: "Error starting the sign-in flow. Please try again.",
+  OAuthCallback: "Error processing the authentication callback.",
+  OAuthCreateAccount: "Could not create your account. Contact admin.",
+  OAuthAccountNotLinked: "This email is linked to another provider.",
+  Callback: "Authentication callback error.",
+  Configuration: "Server configuration error. Contact admin.",
+  AccessDenied: "Access denied. You may not have permission.",
+  Verification: "The verification link has expired.",
+  Default: "An unexpected authentication error occurred.",
+};
+
+function LoginContent() {
   const [loading, setLoading] = useState(false);
+  const searchParams = useSearchParams();
+  const errorCode = searchParams.get("error");
+  const errorMessage = errorCode
+    ? ERROR_MESSAGES[errorCode] || ERROR_MESSAGES.Default
+    : null;
 
   const handleSignIn = async () => {
     setLoading(true);
@@ -25,6 +44,17 @@ export default function LoginPage() {
             IT Admin Dashboard
           </p>
         </div>
+
+        {/* Error banner */}
+        {errorMessage && (
+          <div className="mb-4 flex items-start gap-2 p-3 bg-[var(--error)]/10 border border-[var(--error)]/30 rounded-lg">
+            <AlertCircle className="w-4 h-4 text-[var(--error)] mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sm text-[var(--error)] font-medium">{errorMessage}</p>
+              <p className="text-xs text-[var(--text-muted)] mt-1">Error: {errorCode}</p>
+            </div>
+          </div>
+        )}
 
         {/* Login card */}
         <div className="bg-[var(--bg-secondary)] border border-[var(--border)] rounded-xl p-6">
@@ -59,5 +89,13 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginContent />
+    </Suspense>
   );
 }

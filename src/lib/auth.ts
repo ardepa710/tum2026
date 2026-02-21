@@ -6,15 +6,24 @@ import { logAudit } from "@/lib/audit";
 import type { Role } from "@/lib/rbac-shared";
 
 /**
+ * Map permission_code from tbmpermissions to the app's Role enum.
+ * SUPERADMIN / ADMIN → ADMIN, everything else → VIEWER.
+ * When a tech has multiple permissions, the highest role wins.
+ */
+const PERMISSION_ROLE_MAP: Record<string, Role> = {
+  SUPERADMIN: "ADMIN",
+  ADMIN: "ADMIN",
+  TECH: "VIEWER",
+};
+
+/**
  * Sync permissions from tbmtechpermissions → tbmuser_permissions on login.
- * If the user's email exists in tbmtechpermissions, their UserPermission records
- * are replaced with the tech permissions, and their role is set to ADMIN.
- * Returns the resolved role.
+ * Derives the user's role from the highest permission_code they hold.
  */
 async function syncTechPermissions(userId: string, email: string): Promise<Role> {
   const techPerms = await prisma.techPermission.findMany({
     where: { techEmail: email },
-    select: { permissionId: true },
+    select: { permissionId: true, permission: { select: { permissionCode: true } } },
   });
 
   if (techPerms.length === 0) {
@@ -28,13 +37,18 @@ async function syncTechPermissions(userId: string, email: string): Promise<Role>
 
   const permissionIds = techPerms.map((tp) => tp.permissionId);
 
+  // Derive role from the highest permission code
+  const ROLE_PRIORITY: Role[] = ["ADMIN", "EDITOR", "VIEWER"];
+  const derivedRole = techPerms.reduce<Role>((best, tp) => {
+    const mapped = PERMISSION_ROLE_MAP[tp.permission.permissionCode] || "VIEWER";
+    return ROLE_PRIORITY.indexOf(mapped) < ROLE_PRIORITY.indexOf(best) ? mapped : best;
+  }, "VIEWER");
+
   // Replace all UserPermission records in a transaction
   await prisma.$transaction([
-    // Remove permissions no longer in tech table
     prisma.userPermission.deleteMany({
       where: { userId, permissionId: { notIn: permissionIds } },
     }),
-    // Upsert each permission from tech table
     ...permissionIds.map((permissionId) =>
       prisma.userPermission.upsert({
         where: { userId_permissionId: { userId, permissionId } },
@@ -42,14 +56,13 @@ async function syncTechPermissions(userId: string, email: string): Promise<Role>
         update: {},
       })
     ),
-    // Promote to ADMIN since they're a recognized technician
     prisma.user.update({
       where: { id: userId },
-      data: { role: "ADMIN" },
+      data: { role: derivedRole },
     }),
   ]);
 
-  return "ADMIN";
+  return derivedRole;
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -64,6 +77,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   pages: {
     signIn: "/login",
+    error: "/login",
   },
   events: {
     async signIn({ user }) {
