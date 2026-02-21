@@ -1,6 +1,7 @@
 import { requireRole } from "@/lib/rbac";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { notFound } from "next/navigation";
 import { NinjaDeviceDetail } from "@/components/ninja-device-detail";
 
 export default async function RmmDeviceDetailPage({
@@ -12,6 +13,7 @@ export default async function RmmDeviceDetailPage({
 
   const { deviceId: raw } = await params;
   const deviceId = Number(raw);
+  if (isNaN(deviceId)) notFound();
 
   return (
     <div>
