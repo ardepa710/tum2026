@@ -81,6 +81,7 @@ const navItems = [
   { href: "/dashboard/runbooks", label: "Runbooks", icon: BookOpen },
   { href: "/dashboard/alerts", label: "Alerts", icon: AlertTriangle },
   { href: "/dashboard/health", label: "Service Health", icon: HeartPulse },
+  { href: "/dashboard/security", label: "Security", icon: Shield },
   { href: "/dashboard/logs", label: "Audit Logs", icon: ScrollText },
   { href: "/dashboard/reports", label: "Reports", icon: FileBarChart },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },

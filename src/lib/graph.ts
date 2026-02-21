@@ -261,3 +261,36 @@ export async function getServiceHealthIssues(tenantId: number) {
     return [];
   }
 }
+
+// --- Directory Roles ---
+
+export async function getDirectoryRoles(tenantId: number) {
+  const client = await getGraphClient(tenantId);
+  if (!client) return [];
+
+  try {
+    const response = await client
+      .api("/directoryRoles")
+      .select("id,displayName,roleTemplateId")
+      .get();
+    return response.value;
+  } catch {
+    return [];
+  }
+}
+
+export async function getDirectoryRoleMembers(tenantId: number, roleId: string) {
+  const client = await getGraphClient(tenantId);
+  if (!client) return [];
+
+  try {
+    const response = await client
+      .api(`/directoryRoles/${roleId}/members`)
+      .select("id,displayName,mail,userPrincipalName")
+      .top(999)
+      .get();
+    return response.value;
+  } catch {
+    return [];
+  }
+}
