@@ -27,6 +27,7 @@ import {
   Star,
   ChevronRight,
   User,
+  Monitor,
 } from "lucide-react";
 
 type SidebarBookmark = {
@@ -68,8 +69,13 @@ function getSidebarHref(entityType: string, entityId: string, label: string): st
   }
 }
 
-const navItems = [
+type NavItem = { href: string; label: string; icon: typeof LayoutDashboard };
+
+const standaloneTop: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+];
+
+const mspItems: NavItem[] = [
   { href: "/dashboard/tenants", label: "Tenants", icon: Building2 },
   { href: "/dashboard/users", label: "Users", icon: Users },
   { href: "/dashboard/groups", label: "Groups", icon: UsersRound },
@@ -84,8 +90,35 @@ const navItems = [
   { href: "/dashboard/security", label: "Security", icon: Shield },
   { href: "/dashboard/logs", label: "Audit Logs", icon: ScrollText },
   { href: "/dashboard/reports", label: "Reports", icon: FileBarChart },
+];
+
+const rmmItems: NavItem[] = [
+  { href: "/dashboard/rmm/tenants", label: "Tenants", icon: Building2 },
+  { href: "/dashboard/rmm/devices", label: "Devices", icon: Monitor },
+  { href: "/dashboard/rmm/settings", label: "Settings", icon: Settings },
+];
+
+const standaloneBottom: NavItem[] = [
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
+
+type GroupState = { msp: boolean; rmm: boolean };
+const GROUPS_STORAGE_KEY = "sidebar-groups";
+
+function loadGroupState(defaults: GroupState): GroupState {
+  if (typeof window === "undefined") return defaults;
+  try {
+    const raw = localStorage.getItem(GROUPS_STORAGE_KEY);
+    if (raw) return { ...defaults, ...JSON.parse(raw) };
+  } catch { /* ignore */ }
+  return defaults;
+}
+
+function saveGroupState(state: GroupState) {
+  try {
+    localStorage.setItem(GROUPS_STORAGE_KEY, JSON.stringify(state));
+  } catch { /* ignore */ }
+}
 
 function FavoritesSection({
   favorites,
@@ -140,8 +173,34 @@ export function Sidebar({ role }: { role: Role }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [favoritesOpen, setFavoritesOpen] = useState(false);
   const [favorites, setFavorites] = useState<SidebarBookmark[]>([]);
+  const [groups, setGroups] = useState<GroupState>({ msp: true, rmm: true });
+  // Mobile groups default to collapsed on first open
+  const [mobileGroups, setMobileGroups] = useState<GroupState>({ msp: false, rmm: false });
 
-  const visibleItems = navItems.filter((item) => canAccessPage(role, item.href));
+  // Filter each section by RBAC
+  const visibleTop = standaloneTop.filter((item) => canAccessPage(role, item.href));
+  const visibleMsp = mspItems.filter((item) => canAccessPage(role, item.href));
+  const visibleRmm = rmmItems.filter((item) => canAccessPage(role, item.href));
+  const visibleBottom = standaloneBottom.filter((item) => canAccessPage(role, item.href));
+  // Tablet: all visible items flattened (no group headers)
+  const allVisibleItems = [...visibleTop, ...visibleMsp, ...visibleRmm, ...visibleBottom];
+
+  // Load group collapse state from localStorage on mount
+  useEffect(() => {
+    setGroups(loadGroupState({ msp: true, rmm: true }));
+  }, []);
+
+  function toggleGroup(key: keyof GroupState) {
+    setGroups((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      saveGroupState(next);
+      return next;
+    });
+  }
+
+  function toggleMobileGroup(key: keyof GroupState) {
+    setMobileGroups((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
 
   // Listen for mobile menu open event from header hamburger button
   useEffect(() => {
@@ -163,7 +222,7 @@ export function Sidebar({ role }: { role: Role }) {
       .catch(() => setFavorites([]));
   }, []);
 
-  function NavLink({ item, showLabel = true }: { item: (typeof navItems)[number]; showLabel?: boolean }) {
+  function NavLink({ item, showLabel = true }: { item: NavItem; showLabel?: boolean }) {
     const isActive =
       item.href === "/dashboard"
         ? pathname === "/dashboard"
@@ -186,6 +245,40 @@ export function Sidebar({ role }: { role: Role }) {
     );
   }
 
+  function NavGroup({
+    label,
+    items,
+    isOpen,
+    onToggle,
+  }: {
+    label: string;
+    items: NavItem[];
+    isOpen: boolean;
+    onToggle: () => void;
+  }) {
+    if (items.length === 0) return null;
+    return (
+      <div className="pt-2">
+        <button
+          onClick={onToggle}
+          className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider hover:text-[var(--text-secondary)] transition-colors"
+        >
+          <span>{label}</span>
+          <ChevronRight
+            className={`w-3.5 h-3.5 transition-transform ${isOpen ? "rotate-90" : ""}`}
+          />
+        </button>
+        {isOpen && (
+          <div className="space-y-0.5">
+            {items.map((item) => (
+              <NavLink key={item.href} item={item} />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <>
       {/* Desktop sidebar (lg+): full width with labels */}
@@ -202,7 +295,27 @@ export function Sidebar({ role }: { role: Role }) {
           </Link>
         </div>
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-          {visibleItems.map((item) => (
+          {/* Standalone top items */}
+          {visibleTop.map((item) => (
+            <NavLink key={item.href} item={item} />
+          ))}
+          {/* MSP group */}
+          <NavGroup
+            label="MSP"
+            items={visibleMsp}
+            isOpen={groups.msp}
+            onToggle={() => toggleGroup("msp")}
+          />
+          {/* RMM group */}
+          <NavGroup
+            label="RMM"
+            items={visibleRmm}
+            isOpen={groups.rmm}
+            onToggle={() => toggleGroup("rmm")}
+          />
+          {/* Standalone bottom items */}
+          {visibleBottom.length > 0 && <div className="pt-2" />}
+          {visibleBottom.map((item) => (
             <NavLink key={item.href} item={item} />
           ))}
         </nav>
@@ -222,13 +335,13 @@ export function Sidebar({ role }: { role: Role }) {
         </div>
       </aside>
 
-      {/* Tablet sidebar (md to lg): icons only */}
+      {/* Tablet sidebar (md to lg): icons only — flat list, no group headers */}
       <aside className="hidden md:flex lg:hidden fixed left-0 top-0 h-full w-16 bg-[var(--bg-secondary)] border-r border-[var(--border)] flex-col items-center z-50 py-4 gap-2">
         <Link href="/dashboard" className="w-10 h-10 bg-[var(--accent)] rounded-lg flex items-center justify-center mb-4 shrink-0">
           <Shield className="w-5 h-5 text-white" />
         </Link>
         <nav className="flex-1 flex flex-col items-center gap-1 overflow-y-auto">
-          {visibleItems.map((item) => (
+          {allVisibleItems.map((item) => (
             <NavLink key={item.href} item={item} showLabel={false} />
           ))}
         </nav>
@@ -258,7 +371,27 @@ export function Sidebar({ role }: { role: Role }) {
               </button>
             </div>
             <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-              {visibleItems.map((item) => (
+              {/* Standalone top items */}
+              {visibleTop.map((item) => (
+                <NavLink key={item.href} item={item} />
+              ))}
+              {/* MSP group (collapsed by default on mobile) */}
+              <NavGroup
+                label="MSP"
+                items={visibleMsp}
+                isOpen={mobileGroups.msp}
+                onToggle={() => toggleMobileGroup("msp")}
+              />
+              {/* RMM group (collapsed by default on mobile) */}
+              <NavGroup
+                label="RMM"
+                items={visibleRmm}
+                isOpen={mobileGroups.rmm}
+                onToggle={() => toggleMobileGroup("rmm")}
+              />
+              {/* Standalone bottom items */}
+              {visibleBottom.length > 0 && <div className="pt-2" />}
+              {visibleBottom.map((item) => (
                 <NavLink key={item.href} item={item} />
               ))}
             </nav>
