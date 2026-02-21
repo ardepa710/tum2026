@@ -435,6 +435,7 @@ export function GlobalSearch({ role }: { role?: string }) {
   /* --- Reset activeIndex when results change --- */
   useEffect(() => {
     setActiveIndex(-1);
+    setHoveredIndex(-1);
   }, [localResults, userResults, activeFilter]);
 
   /* --- Close on click outside --- */
@@ -510,7 +511,10 @@ export function GlobalSearch({ role }: { role?: string }) {
     } else if (query.trim().length < 2) {
       // Show recent searches on focus with empty/short query
       fetchRecentSearches().then(() => {
-        setShowRecent(true);
+        // Only show recent if user hasn't started typing
+        if ((inputRef.current?.value ?? "").trim().length < 2) {
+          setShowRecent(true);
+        }
       });
     }
   }
@@ -664,15 +668,14 @@ export function GlobalSearch({ role }: { role?: string }) {
                   {isActive && actions.length > 0 && (
                     <div className="flex items-center gap-1 shrink-0">
                       {actions.map((action) => (
-                        <span
+                        <button
                           key={action.href}
-                          role="button"
-                          tabIndex={-1}
+                          type="button"
                           onClick={(e) => handleQuickAction(e, item, action.href)}
                           className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-[var(--accent)]/20 text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white transition-colors cursor-pointer"
                         >
                           {action.label}
-                        </span>
+                        </button>
                       ))}
                     </div>
                   )}
