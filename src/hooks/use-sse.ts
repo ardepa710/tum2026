@@ -11,11 +11,27 @@ export function useSSE(handlers: Record<string, SSEHandler>) {
   const connect = useCallback(() => {
     const es = new EventSource("/api/sse/events");
 
-    for (const eventType of Object.keys(handlersRef.current)) {
+    // Use generic onmessage as fallback won't work for named events.
+    // Instead, register a broad set of known event types and delegate
+    // to handlersRef at dispatch time (not registration time).
+    const knownEvents = [
+      "notification",
+      "task-run-update",
+      "alert",
+      "tenant-update",
+      "bookmark-update",
+      "custom-field-update",
+      "security-snapshot",
+      "license-update",
+    ];
+
+    for (const eventType of knownEvents) {
       es.addEventListener(eventType, (e: MessageEvent) => {
+        const handler = handlersRef.current[eventType];
+        if (!handler) return;
         try {
           const data = JSON.parse(e.data);
-          handlersRef.current[eventType]?.(data);
+          handler(data);
         } catch {
           // Malformed data, ignore
         }
