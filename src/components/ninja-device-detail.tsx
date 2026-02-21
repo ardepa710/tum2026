@@ -25,6 +25,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { NinjaDeviceActions } from "@/components/ninja-device-actions";
+import { NinjaDeviceAssignment } from "@/components/ninja-device-assignment";
 import type {
   NinjaDevice,
   NinjaAlert,
@@ -198,6 +199,17 @@ export function NinjaDeviceDetail({
   const [alerts, setAlerts] = useState<NinjaAlert[] | null>(null);
   const [alertsLoading, setAlertsLoading] = useState(false);
 
+  // Assignment state
+  const [assignment, setAssignment] = useState<{
+    id: number;
+    adUserUpn: string;
+    adUserName: string;
+    assignedAt: string;
+    assignedBy: string;
+  } | null>(null);
+  const [linkedTenantId, setLinkedTenantId] = useState<number | null>(null);
+  const [assignmentLoading, setAssignmentLoading] = useState(false);
+
   // Service control state: serviceId -> { loading, feedback, message }
   const [serviceControl, setServiceControl] = useState<
     Record<string, { loading: boolean; feedback: "success" | "error" | null; message?: string }>
@@ -349,6 +361,31 @@ export function NinjaDeviceDetail({
         .finally(() => setAlertsLoading(false));
     }
   }, [openSections, alerts, alertsLoading, deviceId]);
+
+  // Lazy-load assignment data when section is opened
+  useEffect(() => {
+    if (
+      openSections.has("assignment") &&
+      !assignment &&
+      !assignmentLoading &&
+      device
+    ) {
+      setAssignmentLoading(true);
+      fetch(
+        `/api/ninja/devices/${deviceId}/assignment?orgId=${device.organizationId}`,
+      )
+        .then((res) => res.json())
+        .then((data) => {
+          setLinkedTenantId(data.tenantId ?? null);
+          setAssignment(data.assignment ?? null);
+        })
+        .catch(() => {
+          setLinkedTenantId(null);
+          setAssignment(null);
+        })
+        .finally(() => setAssignmentLoading(false));
+    }
+  }, [openSections, assignment, assignmentLoading, deviceId, device]);
 
   // Device loading state
   if (deviceLoading) {
@@ -1197,16 +1234,25 @@ export function NinjaDeviceDetail({
         icon={<Users className="w-4 h-4" />}
         isOpen={openSections.has("assignment")}
         onToggle={toggleSection}
+        badge={
+          assignment ? (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--accent)]/10 text-[var(--accent)]">
+              Assigned
+            </span>
+          ) : undefined
+        }
       >
-        <div className="px-4 py-6 text-center">
-          <Users
-            className="w-8 h-8 mx-auto mb-2"
-            style={{ color: "var(--text-muted)" }}
+        {assignmentLoading ? (
+          <SectionSkeleton />
+        ) : (
+          <NinjaDeviceAssignment
+            deviceId={deviceId}
+            organizationId={device.organizationId}
+            tenantId={linkedTenantId}
+            role={role}
+            currentAssignment={assignment}
           />
-          <p className="text-sm text-[var(--text-muted)]">
-            Device assignment coming in Task 8
-          </p>
-        </div>
+        )}
       </Section>
     </div>
   );
