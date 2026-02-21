@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { CreditCard, ChevronDown, ChevronUp, Loader2, TrendingDown, AlertTriangle } from "lucide-react";
 import type { OptimizationSummary } from "@/lib/types/license-optimization";
-import { formatSkuName } from "@/lib/license-optimizer";
+import { formatSkuName } from "@/lib/sku-prices";
 
 type TenantLicense = {
   skuId: string;
