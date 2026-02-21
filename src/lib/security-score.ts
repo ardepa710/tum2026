@@ -12,6 +12,10 @@ const scoreCache = new Map<
 >();
 const CACHE_TTL = 3600000; // 1 hour
 
+export function clearScoreCache(tenantId: number) {
+  scoreCache.delete(tenantId);
+}
+
 const GLOBAL_ADMIN_ROLE_TEMPLATE = "62e90394-69f5-4237-9190-012177145e10";
 
 export async function calculateSecurityScore(

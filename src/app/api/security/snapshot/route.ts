@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { calculateSecurityScore } from "@/lib/security-score";
+import { calculateSecurityScore, clearScoreCache } from "@/lib/security-score";
 import { logAudit, getActor } from "@/lib/audit";
 
 // POST — Capture a new security snapshot (ADMIN only)
@@ -30,6 +30,7 @@ export async function POST(req: NextRequest) {
   if (!tenant)
     return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
 
+  clearScoreCache(tenant.id);
   const scoreResult = await calculateSecurityScore(
     tenant.id,
     tenant.tenantAbbrv,
@@ -72,7 +73,8 @@ export async function GET(req: NextRequest) {
   if (isNaN(tenantId))
     return NextResponse.json({ error: "Invalid tenantId" }, { status: 400 });
 
-  const days = Number(req.nextUrl.searchParams.get("days")) || 30;
+  const daysParam = Number(req.nextUrl.searchParams.get("days")) || 30;
+  const days = Math.min(Math.max(daysParam, 1), 365);
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
   const snapshots = await prisma.securitySnapshot.findMany({
