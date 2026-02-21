@@ -18,7 +18,13 @@ import {
   Search,
   Monitor,
   AlertTriangle,
+  Play,
+  Square,
+  RotateCcw,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
+import { NinjaDeviceActions } from "@/components/ninja-device-actions";
 import type {
   NinjaDevice,
   NinjaAlert,
@@ -164,6 +170,7 @@ function SectionSkeleton() {
 
 export function NinjaDeviceDetail({
   deviceId,
+  role,
 }: {
   deviceId: number;
   role: string;
@@ -190,6 +197,57 @@ export function NinjaDeviceDetail({
 
   const [alerts, setAlerts] = useState<NinjaAlert[] | null>(null);
   const [alertsLoading, setAlertsLoading] = useState(false);
+
+  // Service control state: serviceId -> { loading, feedback, message }
+  const [serviceControl, setServiceControl] = useState<
+    Record<string, { loading: boolean; feedback: "success" | "error" | null; message?: string }>
+  >({});
+
+  const canControl = role === "ADMIN" || role === "EDITOR";
+
+  const handleServiceControl = async (
+    svcId: string,
+    action: "START" | "STOP" | "RESTART",
+  ) => {
+    setServiceControl((prev) => ({
+      ...prev,
+      [svcId]: { loading: true, feedback: null },
+    }));
+    try {
+      const res = await fetch(
+        `/api/ninja/devices/${deviceId}/services/${encodeURIComponent(svcId)}/control`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action }),
+        },
+      );
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: "Failed" }));
+        setServiceControl((prev) => ({
+          ...prev,
+          [svcId]: { loading: false, feedback: "error", message: data.error },
+        }));
+      } else {
+        setServiceControl((prev) => ({
+          ...prev,
+          [svcId]: { loading: false, feedback: "success", message: action },
+        }));
+      }
+    } catch {
+      setServiceControl((prev) => ({
+        ...prev,
+        [svcId]: { loading: false, feedback: "error", message: "Network error" },
+      }));
+    }
+    setTimeout(() => {
+      setServiceControl((prev) => {
+        const next = { ...prev };
+        delete next[svcId];
+        return next;
+      });
+    }, 2500);
+  };
 
   // Open sections
   const [openSections, setOpenSections] = useState<Set<SectionKey>>(
@@ -390,6 +448,13 @@ export function NinjaDeviceDetail({
           </div>
         </div>
       </div>
+
+      {/* Actions bar */}
+      <NinjaDeviceActions
+        deviceId={deviceId}
+        role={role}
+        maintenance={device.maintenance}
+      />
 
       {/* --- OVERVIEW --- */}
       <Section
@@ -959,29 +1024,84 @@ export function NinjaDeviceDetail({
                   <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                     Start Type
                   </th>
+                  {canControl && (
+                    <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
+                      Actions
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody>
-                {services.map((s, i) => (
-                  <tr
-                    key={i}
-                    className="border-b border-[var(--border)] last:border-b-0 hover:bg-[var(--bg-hover)] transition-colors"
-                  >
-                    <td className="px-4 py-2 text-sm text-[var(--text-primary)]">
-                      {s.displayName || s.serviceName || "\u2014"}
-                    </td>
-                    <td className="px-4 py-2">
-                      <span
-                        className={`inline-block text-[11px] font-medium px-2 py-0.5 rounded-full ${serviceStateBadge(s.state)}`}
-                      >
-                        {s.state || "Unknown"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2 text-xs text-[var(--text-muted)]">
-                      {s.startType || "\u2014"}
-                    </td>
-                  </tr>
-                ))}
+                {services.map((s, i) => {
+                  const svcId = s.serviceName || s.serviceId || `svc-${i}`;
+                  const ctrl = serviceControl[svcId];
+                  return (
+                    <tr
+                      key={i}
+                      className="border-b border-[var(--border)] last:border-b-0 hover:bg-[var(--bg-hover)] transition-colors"
+                    >
+                      <td className="px-4 py-2 text-sm text-[var(--text-primary)]">
+                        {s.displayName || s.serviceName || "\u2014"}
+                      </td>
+                      <td className="px-4 py-2">
+                        <span
+                          className={`inline-block text-[11px] font-medium px-2 py-0.5 rounded-full ${serviceStateBadge(s.state)}`}
+                        >
+                          {s.state || "Unknown"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2 text-xs text-[var(--text-muted)]">
+                        {s.startType || "\u2014"}
+                      </td>
+                      {canControl && (
+                        <td className="px-4 py-2">
+                          {ctrl?.loading ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-[var(--accent)]" />
+                          ) : ctrl?.feedback ? (
+                            <span
+                              className={`inline-flex items-center gap-1 text-[11px] font-medium ${
+                                ctrl.feedback === "success"
+                                  ? "text-[var(--success)]"
+                                  : "text-[var(--error)]"
+                              }`}
+                            >
+                              {ctrl.feedback === "success" ? (
+                                <CheckCircle className="w-3 h-3" />
+                              ) : (
+                                <XCircle className="w-3 h-3" />
+                              )}
+                              {ctrl.feedback === "success" ? ctrl.message : "Failed"}
+                            </span>
+                          ) : (
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => handleServiceControl(svcId, "START")}
+                                title="Start"
+                                className="p-1 rounded hover:bg-[var(--success)]/10 text-[var(--text-muted)] hover:text-[var(--success)] transition-colors"
+                              >
+                                <Play className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleServiceControl(svcId, "STOP")}
+                                title="Stop"
+                                className="p-1 rounded hover:bg-[var(--error)]/10 text-[var(--text-muted)] hover:text-[var(--error)] transition-colors"
+                              >
+                                <Square className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleServiceControl(svcId, "RESTART")}
+                                title="Restart"
+                                className="p-1 rounded hover:bg-[var(--warning)]/10 text-[var(--text-muted)] hover:text-[var(--warning)] transition-colors"
+                              >
+                                <RotateCcw className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
