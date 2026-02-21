@@ -91,11 +91,14 @@ model Tenant {
   tenantIdRewst   String           @map("tenantid_rewst")
   tenantIdMsft    String           @map("tenantid_msft")
   domainUrl       String?          @map("domain_url")
+  ninjaOrgId      Int?             @map("ninja_org_id")
+  ninjaOrgName    String?          @map("ninja_org_name")
   regDttm         DateTime         @default(now()) @map("reg_dttm")
   regUser         String           @map("reg_user")
-  automationTasks   AutomationTask[]
-  taskRuns          TaskRun[]
-  securitySnapshots SecuritySnapshot[]
+  automationTasks    AutomationTask[]
+  taskRuns           TaskRun[]
+  securitySnapshots  SecuritySnapshot[]
+  deviceAssignments  DeviceAssignment[]
 
   @@map("tenants")
 }
@@ -325,6 +328,21 @@ model CustomFieldValue {
   @@unique([fieldId, entityType, entityId])
   @@index([entityType, entityId])
   @@map("tbmcustom_field_values")
+}
+
+model DeviceAssignment {
+  id              Int      @id @default(autoincrement())
+  tenantId        Int
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ninjaDeviceId   Int      @map("ninja_device_id")
+  ninjaDeviceName String   @map("ninja_device_name")
+  adUserUpn       String   @map("ad_user_upn")
+  adUserName      String   @map("ad_user_name")
+  assignedAt      DateTime @default(now()) @map("assigned_at")
+  assignedBy      String   @map("assigned_by")
+
+  @@unique([tenantId, ninjaDeviceId])
+  @@map("device_assignments")
 }
 
 model Bookmark {
