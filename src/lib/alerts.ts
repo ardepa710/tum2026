@@ -8,7 +8,8 @@ export interface Alert {
     | "failed_runs"
     | "low_health"
     | "service_degraded"
-    | "stale_sync";
+    | "stale_sync"
+    | "sophos_alert";
   severity: "error" | "warning" | "info";
   title: string;
   description: string;
@@ -75,7 +76,7 @@ export async function generateAlerts(): Promise<Alert[]> {
 
   // 3. Per-tenant checks: Low health + service degradation
   const tenants = await prisma.tenant.findMany({
-    select: { id: true, tenantName: true, tenantAbbrv: true },
+    select: { id: true, tenantName: true, tenantAbbrv: true, sophosOrgId: true },
   });
 
   for (const tenant of tenants) {
@@ -119,6 +120,31 @@ export async function generateAlerts(): Promise<Alert[]> {
       }
     } catch {
       /* skip */
+    }
+
+    // Sophos high-severity alerts
+    if (tenant.sophosOrgId) {
+      try {
+        const { getSophosAlerts } = await import("@/lib/sophos");
+        const alertData = await getSophosAlerts(tenant.id, {
+          pageSize: 10,
+          severity: "high",
+        });
+        for (const sa of alertData.items) {
+          alerts.push({
+            id: `sophos-alert-${sa.id}`,
+            type: "sophos_alert",
+            severity: "error",
+            title: `Sophos: ${sa.description}`,
+            description: `${sa.category} — ${sa.product} (${tenant.tenantAbbrv})`,
+            tenantId: tenant.id,
+            tenantName: tenant.tenantName,
+            link: `/dashboard/sophos/endpoints`,
+          });
+        }
+      } catch {
+        /* skip tenant on Sophos error */
+      }
     }
   }
 
