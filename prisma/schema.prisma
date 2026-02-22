@@ -93,12 +93,16 @@ model Tenant {
   domainUrl       String?          @map("domain_url")
   ninjaOrgId      Int?             @map("ninja_org_id")
   ninjaOrgName    String?          @map("ninja_org_name")
+  sophosOrgId   String?  @map("sophos_org_id")
+  sophosRegion  String?  @map("sophos_region")
+  sophosApiHost String?  @map("sophos_api_host")
   regDttm         DateTime         @default(now()) @map("reg_dttm")
   regUser         String           @map("reg_user")
   automationTasks    AutomationTask[]
   taskRuns           TaskRun[]
   securitySnapshots  SecuritySnapshot[]
   deviceAssignments  DeviceAssignment[]
+  crossLinks         DeviceCrossLink[]
 
   @@map("tenants")
 }
@@ -343,6 +347,22 @@ model DeviceAssignment {
 
   @@unique([tenantId, ninjaDeviceId])
   @@map("device_assignments")
+}
+
+model DeviceCrossLink {
+  id                 Int      @id @default(autoincrement())
+  tenantId           Int
+  tenant             Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ninjaDeviceId      Int      @map("ninja_device_id")
+  ninjaDeviceName    String   @map("ninja_device_name")
+  sophosEndpointId   String   @map("sophos_endpoint_id")
+  sophosEndpointName String   @map("sophos_endpoint_name")
+  linkedAt           DateTime @default(now()) @map("linked_at")
+  linkedBy           String   @map("linked_by")
+
+  @@unique([tenantId, ninjaDeviceId])
+  @@unique([tenantId, sophosEndpointId])
+  @@map("device_cross_links")
 }
 
 model Bookmark {
