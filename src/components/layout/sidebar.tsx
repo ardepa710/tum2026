@@ -28,6 +28,7 @@ import {
   ChevronRight,
   User,
   Monitor,
+  FolderTree,
 } from "lucide-react";
 
 type SidebarBookmark = {
@@ -98,11 +99,17 @@ const rmmItems: NavItem[] = [
   { href: "/dashboard/rmm/settings", label: "Settings", icon: Settings },
 ];
 
+const securityItems: NavItem[] = [
+  { href: "/dashboard/sophos/endpoints", label: "Endpoints", icon: Shield },
+  { href: "/dashboard/sophos/groups", label: "Groups", icon: FolderTree },
+  { href: "/dashboard/sophos/settings", label: "Settings", icon: Settings },
+];
+
 const standaloneBottom: NavItem[] = [
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
-type GroupState = { msp: boolean; rmm: boolean };
+type GroupState = { msp: boolean; rmm: boolean; security: boolean };
 const GROUPS_STORAGE_KEY = "sidebar-groups";
 
 function loadGroupState(defaults: GroupState): GroupState {
@@ -173,21 +180,22 @@ export function Sidebar({ role }: { role: Role }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [favoritesOpen, setFavoritesOpen] = useState(false);
   const [favorites, setFavorites] = useState<SidebarBookmark[]>([]);
-  const [groups, setGroups] = useState<GroupState>({ msp: true, rmm: true });
+  const [groups, setGroups] = useState<GroupState>({ msp: true, rmm: true, security: true });
   // Mobile groups default to collapsed on first open
-  const [mobileGroups, setMobileGroups] = useState<GroupState>({ msp: false, rmm: false });
+  const [mobileGroups, setMobileGroups] = useState<GroupState>({ msp: false, rmm: false, security: false });
 
   // Filter each section by RBAC
   const visibleTop = standaloneTop.filter((item) => canAccessPage(role, item.href));
   const visibleMsp = mspItems.filter((item) => canAccessPage(role, item.href));
   const visibleRmm = rmmItems.filter((item) => canAccessPage(role, item.href));
+  const visibleSecurity = securityItems.filter((item) => canAccessPage(role, item.href));
   const visibleBottom = standaloneBottom.filter((item) => canAccessPage(role, item.href));
   // Tablet: all visible items flattened (no group headers)
-  const allVisibleItems = [...visibleTop, ...visibleMsp, ...visibleRmm, ...visibleBottom];
+  const allVisibleItems = [...visibleTop, ...visibleMsp, ...visibleRmm, ...visibleSecurity, ...visibleBottom];
 
   // Load group collapse state from localStorage on mount
   useEffect(() => {
-    setGroups(loadGroupState({ msp: true, rmm: true }));
+    setGroups(loadGroupState({ msp: true, rmm: true, security: true }));
   }, []);
 
   function toggleGroup(key: keyof GroupState) {
@@ -313,6 +321,13 @@ export function Sidebar({ role }: { role: Role }) {
             isOpen={groups.rmm}
             onToggle={() => toggleGroup("rmm")}
           />
+          {/* Security group */}
+          <NavGroup
+            label="Security"
+            items={visibleSecurity}
+            isOpen={groups.security}
+            onToggle={() => toggleGroup("security")}
+          />
           {/* Standalone bottom items */}
           {visibleBottom.length > 0 && <div className="pt-2" />}
           {visibleBottom.map((item) => (
@@ -388,6 +403,13 @@ export function Sidebar({ role }: { role: Role }) {
                 items={visibleRmm}
                 isOpen={mobileGroups.rmm}
                 onToggle={() => toggleMobileGroup("rmm")}
+              />
+              {/* Security group (collapsed by default on mobile) */}
+              <NavGroup
+                label="Security"
+                items={visibleSecurity}
+                isOpen={mobileGroups.security}
+                onToggle={() => toggleMobileGroup("security")}
               />
               {/* Standalone bottom items */}
               {visibleBottom.length > 0 && <div className="pt-2" />}
