@@ -5,12 +5,14 @@
 - Local: /home/ardepa/tum2026
 
 ## Stack
-- **Framework:** Next.js 15 (App Router)
+- **Framework:** Next.js 16 (App Router, Turbopack)
 - **Language:** TypeScript
 - **UI:** Tailwind CSS v4, Lucide React icons
 - **Auth:** NextAuth.js v5 (Auth.js) — Microsoft Entra ID SSO
-- **ORM:** Prisma 6 + PostgreSQL
+- **ORM:** Prisma 7 + PostgreSQL (Neon.tech prod, localhost dev)
 - **Microsoft API:** @microsoft/microsoft-graph-client (client credentials flow)
+- **NinjaOne RMM:** Client credentials OAuth2, global token cache
+- **Sophos Central:** Partner API OAuth2, per-tenant routing with X-Tenant-ID + regional apiHost
 
 ## Project Structure
 ```
@@ -43,10 +45,16 @@ src/
 ├── lib/
 │   ├── auth.ts                 # NextAuth config
 │   ├── prisma.ts               # Prisma client singleton
-│   └── graph.ts                # Microsoft Graph API client
+│   ├── graph.ts                # Microsoft Graph API client
+│   ├── ninja.ts                # NinjaOne RMM API client
+│   ├── ninja-utils.ts          # Client-safe NinjaOne helpers
+│   ├── sophos.ts               # Sophos Central API client
+│   ├── sophos-utils.ts         # Client-safe Sophos helpers
+│   ├── types/ninja.ts          # NinjaOne TypeScript types
+│   └── types/sophos.ts         # Sophos TypeScript types
 └── middleware.ts                # Auth middleware for /dashboard/*
 prisma/
-└── schema.prisma               # User, Tenant, AutomationTask models
+└── schema.prisma               # User, Tenant, DeviceCrossLink, + more models
 ```
 
 ## Theme
@@ -65,6 +73,9 @@ Dark theme with CSS variables:
 See `.env.local.example` for required variables:
 - DATABASE_URL, AUTH_SECRET, AUTH_URL
 - AUTH_MICROSOFT_ENTRA_ID_ID, AUTH_MICROSOFT_ENTRA_ID_SECRET, AUTH_MICROSOFT_ENTRA_ID_TENANT_ID
+- GRAPH_CLIENT_ID, GRAPH_CLIENT_SECRET
+- NINJA_CLIENT_ID, NINJA_CLIENT_SECRET
+- SOPHOS_CLIENT_ID, SOPHOS_CLIENT_SECRET
 
 ## Commands
 - `npm run dev` — Development server

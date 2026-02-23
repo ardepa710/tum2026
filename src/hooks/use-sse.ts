@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef } from "react";
 
 type SSEHandler = (data: unknown) => void;
 
@@ -8,47 +8,67 @@ export function useSSE(handlers: Record<string, SSEHandler>) {
   const handlersRef = useRef(handlers);
   handlersRef.current = handlers;
 
-  const connect = useCallback(() => {
-    const es = new EventSource("/api/sse/events");
+  useEffect(() => {
+    let es: EventSource | null = null;
+    let retryTimeout: ReturnType<typeof setTimeout> | null = null;
+    let retryDelay = 5000; // Start at 5s, max 60s
+    let cancelled = false;
 
-    // Use generic onmessage as fallback won't work for named events.
-    // Instead, register a broad set of known event types and delegate
-    // to handlersRef at dispatch time (not registration time).
-    const knownEvents = [
-      "notification",
-      "task-run-update",
-      "alert",
-      "tenant-update",
-      "bookmark-update",
-      "custom-field-update",
-      "security-snapshot",
-      "license-update",
-    ];
+    function connect() {
+      if (cancelled) return;
 
-    for (const eventType of knownEvents) {
-      es.addEventListener(eventType, (e: MessageEvent) => {
-        const handler = handlersRef.current[eventType];
-        if (!handler) return;
-        try {
-          const data = JSON.parse(e.data);
-          handler(data);
-        } catch {
-          // Malformed data, ignore
-        }
+      es = new EventSource("/api/sse/events");
+
+      const knownEvents = [
+        "notification",
+        "task-run-update",
+        "alert",
+        "tenant-update",
+        "bookmark-update",
+        "custom-field-update",
+        "security-snapshot",
+        "license-update",
+      ];
+
+      for (const eventType of knownEvents) {
+        es.addEventListener(eventType, (e: MessageEvent) => {
+          const handler = handlersRef.current[eventType];
+          if (!handler) return;
+          try {
+            const data = JSON.parse(e.data);
+            handler(data);
+          } catch {
+            // Malformed data, ignore
+          }
+        });
+      }
+
+      // Reset backoff on successful connection
+      es.addEventListener("open", () => {
+        retryDelay = 5000;
       });
+
+      es.onerror = () => {
+        if (es) {
+          es.close();
+          es = null;
+        }
+        if (cancelled) return;
+        // Exponential backoff: 5s → 10s → 20s → 40s → 60s (cap)
+        retryTimeout = setTimeout(connect, retryDelay);
+        retryDelay = Math.min(retryDelay * 2, 60000);
+      };
     }
 
-    es.onerror = () => {
-      es.close();
-      // Auto-reconnect after 5s
-      setTimeout(connect, 5000);
+    connect();
+
+    return () => {
+      cancelled = true;
+      if (retryTimeout) clearTimeout(retryTimeout);
+      if (es) {
+        es.close();
+        es = null;
+      }
     };
-
-    return es;
   }, []);
-
-  useEffect(() => {
-    const es = connect();
-    return () => es.close();
-  }, [connect]);
 }
