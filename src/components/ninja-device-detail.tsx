@@ -23,9 +23,11 @@ import {
   RotateCcw,
   CheckCircle,
   XCircle,
+  Link2,
 } from "lucide-react";
 import { NinjaDeviceActions } from "@/components/ninja-device-actions";
 import { NinjaDeviceAssignment } from "@/components/ninja-device-assignment";
+import { NinjaCrossLinkSection } from "@/components/ninja-cross-link-section";
 import type {
   NinjaDevice,
   NinjaAlert,
@@ -101,7 +103,8 @@ type SectionKey =
   | "patches"
   | "services"
   | "alerts"
-  | "assignment";
+  | "assignment"
+  | "crossLink";
 
 // ---------------------------------------------------------------------------
 // Collapsible Section wrapper
@@ -1255,6 +1258,24 @@ export function NinjaDeviceDetail({
             onAssignmentChange={(a) => setAssignment(a)}
           />
         )}
+      </Section>
+
+      {/* --- LINKED SECURITY ENDPOINT --- */}
+      <Section
+        id="crossLink"
+        title="Linked Security Endpoint"
+        icon={<Link2 className="w-4 h-4" />}
+        isOpen={openSections.has("crossLink")}
+        onToggle={toggleSection}
+      >
+        <div className="px-4 py-3">
+          <NinjaCrossLinkSection
+            tenantId={linkedTenantId}
+            ninjaDeviceId={deviceId}
+            ninjaDeviceName={device.displayName || device.systemName || `Device #${deviceId}`}
+            role={role}
+          />
+        </div>
       </Section>
     </div>
   );

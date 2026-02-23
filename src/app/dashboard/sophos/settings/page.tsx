@@ -2,6 +2,7 @@ import { requireRole } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { getSophosPartnerTenants } from "@/lib/sophos";
 import { SophosLinkTable } from "@/components/sophos-link-table";
+import { CrossLinkManager } from "@/components/cross-link-manager";
 import { Settings, AlertTriangle } from "lucide-react";
 
 export default async function SophosSettingsPage() {
@@ -12,6 +13,7 @@ export default async function SophosSettingsPage() {
       id: true,
       tenantName: true,
       tenantAbbrv: true,
+      ninjaOrgId: true,
       sophosOrgId: true,
       sophosRegion: true,
       sophosApiHost: true,
@@ -75,6 +77,14 @@ export default async function SophosSettingsPage() {
 
       {/* Link table */}
       <SophosLinkTable tenants={tenants} sophosOrgs={sophosOrgs} />
+
+      {/* Cross-Link Manager */}
+      <div className="mt-8">
+        <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
+          Device Cross-Links
+        </h3>
+        <CrossLinkManager tenants={tenants} />
+      </div>
     </div>
   );
 }

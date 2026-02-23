@@ -10,6 +10,7 @@ import {
   Lock,
   Bell,
   Users,
+  Link2,
 } from "lucide-react";
 import type {
   SophosEndpoint,
@@ -26,6 +27,7 @@ import {
 import { SophosHealthBadge } from "@/components/sophos-health-badge";
 import { SophosSeverityBadge } from "@/components/sophos-severity-badge";
 import Link from "next/link";
+import { SophosCrossLinkSection } from "@/components/sophos-cross-link-section";
 
 // ---------------------------------------------------------------------------
 // Section types
@@ -37,7 +39,8 @@ type SectionKey =
   | "health"
   | "isolation"
   | "alerts"
-  | "groups";
+  | "groups"
+  | "crossLink";
 
 // ---------------------------------------------------------------------------
 // Collapsible Section wrapper
@@ -519,6 +522,22 @@ export function SophosEndpointDetail({
             </p>
           )}
         </div>
+      </Section>
+
+      {/* Section 7: Linked RMM Device (cross-link) */}
+      <Section
+        title="Linked RMM Device"
+        icon={<Link2 className="w-4 h-4" />}
+        sectionKey="crossLink"
+        openSections={openSections}
+        onToggle={toggleSection}
+      >
+        <SophosCrossLinkSection
+          tenantId={tenantId}
+          sophosEndpointId={endpoint.id}
+          sophosEndpointName={endpoint.hostname}
+          role={role}
+        />
       </Section>
     </div>
   );
