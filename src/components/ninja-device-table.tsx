@@ -36,7 +36,7 @@ export function NinjaDeviceTable() {
     "all" | "online" | "offline"
   >("all");
 
-  const PAGE_SIZE = 100;
+  const PAGE_SIZE = 200;
 
   // Fetch organizations on mount
   useEffect(() => {
@@ -62,7 +62,7 @@ export function NinjaDeviceTable() {
       .then((data) => {
         if (Array.isArray(data)) {
           setDevices(data);
-          setHasMore(data.length === PAGE_SIZE);
+          setHasMore(data.length > 0);
         } else {
           setDevices([]);
           setHasMore(false);
@@ -74,7 +74,7 @@ export function NinjaDeviceTable() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Load more (cursor-based pagination)
+  // Load more (cursor-based pagination) — fetches one page
   const loadMore = useCallback(() => {
     if (loadingMore || !hasMore || devices.length === 0) return;
     setLoadingMore(true);
@@ -85,9 +85,9 @@ export function NinjaDeviceTable() {
         return res.json();
       })
       .then((data) => {
-        if (Array.isArray(data)) {
+        if (Array.isArray(data) && data.length > 0) {
           setDevices((prev) => [...prev, ...data]);
-          setHasMore(data.length === PAGE_SIZE);
+          setHasMore(true);
         } else {
           setHasMore(false);
         }
@@ -96,6 +96,37 @@ export function NinjaDeviceTable() {
         setHasMore(false);
       })
       .finally(() => setLoadingMore(false));
+  }, [devices, hasMore, loadingMore]);
+
+  // Load ALL remaining devices via auto-pagination
+  const loadAll = useCallback(async () => {
+    if (loadingMore || !hasMore || devices.length === 0) return;
+    setLoadingMore(true);
+
+    let allDevices = [...devices];
+    let keepGoing = true;
+
+    while (keepGoing) {
+      const lastId = allDevices[allDevices.length - 1].id;
+      try {
+        const res = await fetch(
+          `/api/ninja/devices?pageSize=${PAGE_SIZE}&after=${lastId}`,
+        );
+        if (!res.ok) break;
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          allDevices = [...allDevices, ...data];
+        } else {
+          keepGoing = false;
+        }
+      } catch {
+        keepGoing = false;
+      }
+    }
+
+    setDevices(allDevices);
+    setHasMore(false);
+    setLoadingMore(false);
   }, [devices, hasMore, loadingMore]);
 
   // Build org lookup
@@ -358,21 +389,28 @@ export function NinjaDeviceTable() {
 
           {/* Load more */}
           {hasMore && !loading && (
-            <div className="px-4 py-3 border-t border-[var(--border)] flex justify-center">
-              <button
-                onClick={loadMore}
-                disabled={loadingMore}
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-[var(--bg-hover)] border border-[var(--border)] rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--accent)] transition-colors disabled:opacity-50"
-              >
-                {loadingMore ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Loading...
-                  </>
-                ) : (
-                  "Load more devices"
-                )}
-              </button>
+            <div className="px-4 py-3 border-t border-[var(--border)] flex justify-center gap-3">
+              {loadingMore ? (
+                <div className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-[var(--text-secondary)]">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Loading devices...
+                </div>
+              ) : (
+                <>
+                  <button
+                    onClick={loadAll}
+                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-[var(--accent)] text-white rounded-lg hover:bg-[var(--accent)]/80 transition-colors"
+                  >
+                    Load all devices
+                  </button>
+                  <button
+                    onClick={loadMore}
+                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-[var(--bg-hover)] border border-[var(--border)] rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--accent)] transition-colors"
+                  >
+                    Load more
+                  </button>
+                </>
+              )}
             </div>
           )}
         </div>

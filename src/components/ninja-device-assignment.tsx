@@ -115,18 +115,34 @@ export function NinjaDeviceAssignment({
     setShowDropdown(true);
     setSearchTerm("");
 
-    if (adUsers.length === 0 && tenantId) {
+    // Fetch if not yet loaded or if previous attempt errored
+    if ((adUsers.length === 0 || usersError) && tenantId) {
       setUsersLoading(true);
       setUsersError(null);
       try {
         const res = await fetch(`/api/tenants/${tenantId}/users`);
         if (!res.ok) {
-          throw new Error("Failed to fetch users");
+          const body = await res.json().catch(() => ({}));
+          throw new Error(
+            body.error || `Failed to fetch users (HTTP ${res.status})`,
+          );
         }
         const data = await res.json();
-        setAdUsers(Array.isArray(data) ? data : []);
-      } catch {
-        setUsersError("Failed to load AD users");
+        if (Array.isArray(data)) {
+          setAdUsers(data);
+          if (data.length === 0) {
+            setUsersError(
+              "No AD users returned. Verify the tenant has Azure AD (Entra ID) credentials configured.",
+            );
+          }
+        } else {
+          setAdUsers([]);
+          setUsersError("Unexpected response format from users API");
+        }
+      } catch (e) {
+        setUsersError(
+          e instanceof Error ? e.message : "Failed to load AD users",
+        );
       } finally {
         setUsersLoading(false);
       }
@@ -334,18 +350,28 @@ export function NinjaDeviceAssignment({
                   <div className="flex items-center justify-center py-6">
                     <Loader2 className="w-4 h-4 animate-spin text-[var(--accent)]" />
                     <span className="ml-2 text-xs text-[var(--text-secondary)]">
-                      Loading users...
+                      Loading AD users...
                     </span>
                   </div>
                 ) : usersError ? (
-                  <div className="px-3 py-4 text-center">
+                  <div className="px-3 py-4 text-center space-y-2">
                     <p className="text-xs text-[var(--error)]">{usersError}</p>
+                    <button
+                      onClick={() => {
+                        setAdUsers([]);
+                        setUsersError(null);
+                        handleOpenDropdown();
+                      }}
+                      className="text-xs text-[var(--accent)] hover:underline"
+                    >
+                      Retry
+                    </button>
                   </div>
                 ) : filteredUsers.length === 0 ? (
                   <div className="px-3 py-4 text-center">
                     <p className="text-xs text-[var(--text-muted)]">
                       {adUsers.length === 0
-                        ? "No AD users found"
+                        ? "No AD users found for this tenant"
                         : "No users match your search"}
                     </p>
                   </div>

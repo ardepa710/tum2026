@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { getUsers } from "@/lib/graph";
 
 export async function GET(
@@ -18,6 +19,29 @@ export async function GET(
   }
 
   try {
+    // Quick check: does the tenant exist and have Azure AD configured?
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { tenantIdMsft: true },
+    });
+
+    if (!tenant) {
+      return NextResponse.json(
+        { error: "Tenant not found" },
+        { status: 404 },
+      );
+    }
+
+    if (!tenant.tenantIdMsft) {
+      return NextResponse.json(
+        {
+          error:
+            "This tenant has no Azure AD (Entra ID) credentials configured. Set the Microsoft Tenant ID in tenant settings.",
+        },
+        { status: 422 },
+      );
+    }
+
     const users = await getUsers(tenantId);
     return NextResponse.json(users);
   } catch (e) {
