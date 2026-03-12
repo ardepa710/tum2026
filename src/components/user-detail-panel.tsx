@@ -99,6 +99,7 @@ export function UserDetailPanel({
   const [adData, setAdData] = useState<AdUserSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [m365Error, setM365Error] = useState<string | null>(null);
   const [visible, setVisible] = useState(false);
   const [availableTasks, setAvailableTasks] = useState<AvailableTask[]>([]);
   const [selectedTaskId, setSelectedTaskId] = useState("");
@@ -141,26 +142,32 @@ export function UserDetailPanel({
 
       const fetches: Promise<void>[] = [];
 
-      // M365 fetch
+      // M365 fetch — failures are soft (shown as banner, not fatal)
       if (m365Key) {
         fetches.push(
           fetch(`/api/tenants/${tenantId}/users/${encodeURIComponent(m365Key)}`)
             .then((res) => {
-              if (!res.ok) return res.json().then((d) => Promise.reject(new Error(d.error || "Failed to fetch M365 details")));
+              if (!res.ok) return res.json().then((d) => Promise.reject(new Error(d.error || "M365 data unavailable")));
               return res.json();
             })
             .then((d: UserDetailResponse) => { if (!cancelled) setData(d); })
-            .catch((e) => { if (!cancelled) setError(e instanceof Error ? e.message : "Failed to fetch user details"); })
+            .catch((e) => { if (!cancelled) setM365Error(e instanceof Error ? e.message : "M365 data unavailable"); })
         );
       }
 
-      // AD fetch — only when SAM is available
+      // AD fetch — primary source of truth when userSam is available
       if (userSam) {
         fetches.push(
           fetch(`/api/tenants/${tenantId}/ad/users/${encodeURIComponent(userSam)}`)
-            .then((res) => res.ok ? res.json() : null)
-            .then((d: AdUserSnapshot | null) => { if (!cancelled && d) setAdData(d); })
-            .catch(() => { /* AD data optional, silently ignore */ })
+            .then((res) => {
+              if (!res.ok) return res.json().then((d) => Promise.reject(new Error(d.error || "User not found")));
+              return res.json();
+            })
+            .then((d: AdUserSnapshot) => { if (!cancelled) setAdData(d); })
+            .catch((e) => {
+              // AD is primary when SAM is provided — escalate to fatal error only if no M365 either
+              if (!cancelled && !m365Key) setError(e instanceof Error ? e.message : "User not found");
+            })
         );
       }
 
@@ -344,7 +351,7 @@ export function UserDetailPanel({
           <div className="flex-1 overflow-y-auto">
             {loading && <SkeletonBody />}
             {error && !loading && <ErrorState message={error} />}
-            {(data || adData) && !loading && !error && <DetailBody data={data} adData={adData} tenantId={tenantId} role={role} />}
+            {(data || adData) && !loading && !error && <DetailBody data={data} adData={adData} tenantId={tenantId} role={role} m365Error={m365Error} />}
             {!data && !adData && !loading && !error && <ErrorState message="No data available for this user." />}
           </div>
         </div>
@@ -357,7 +364,7 @@ export function UserDetailPanel({
 
 /* ─── Detail Body ─── */
 
-function DetailBody({ data, adData, tenantId, role }: { data: UserDetailResponse | null; adData: AdUserSnapshot | null; tenantId: string; role: string }) {
+function DetailBody({ data, adData, tenantId, role, m365Error }: { data: UserDetailResponse | null; adData: AdUserSnapshot | null; tenantId: string; role: string; m365Error: string | null }) {
   const user = data?.user;
   const memberOf = data?.memberOf ?? [];
   const licenses = data?.licenses ?? [];
@@ -394,9 +401,15 @@ function DetailBody({ data, adData, tenantId, role }: { data: UserDetailResponse
         </Section>
       )}
 
-      {/* ── M365 sections — only when M365 data available ── */}
-      {!user && !adData && (
-        <div className="text-center py-4 text-sm text-[var(--text-muted)]">No data available.</div>
+      {/* ── M365 unavailable banner ── */}
+      {!user && m365Error && (
+        <div className="flex items-start gap-3 p-3 bg-[var(--warning)]/10 border border-[var(--warning)]/20 rounded-lg">
+          <AlertTriangle className="w-4 h-4 text-[var(--warning)] shrink-0 mt-0.5" />
+          <div>
+            <p className="text-xs font-medium text-[var(--warning)]">M365 data unavailable</p>
+            <p className="text-xs text-[var(--warning)]/70 mt-0.5">{m365Error}</p>
+          </div>
+        </div>
       )}
 
       {/* ── Microsoft 365 Sections ── */}
