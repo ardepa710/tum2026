@@ -21,7 +21,6 @@ import {
   BitwardenClient,
   ClientSettings,
   DeviceType,
-  LogLevel,
 } from '@bitwarden/sdk-napi';
 
 interface SecretCache {
@@ -57,11 +56,11 @@ class SecretsManager {
       userAgent: 'TUM2026',
     };
 
-    this.client = new BitwardenClient(settings, LogLevel.Info);
+    this.client = new BitwardenClient(settings, 2); // 2 = LogLevel.Info
 
     // Authenticate with access token
     // Note: Vaultwarden doesn't require a state file path for service account tokens
-    await this.client.auth().loginAccessToken(accessToken, null);
+    await this.client.auth().loginAccessToken(accessToken, undefined);
 
     this.authenticated = true;
 
@@ -83,7 +82,7 @@ class SecretsManager {
 
       // List all secrets and find the one we want by name
       // The Bitwarden SDK returns secrets with IDs, but we need to search by name
-      const secretsResponse = await this.client!.secrets().list(null);
+      const secretsResponse = await this.client!.secrets().list(undefined as unknown as string);
 
       if (!secretsResponse || !secretsResponse.data) {
         throw new Error('No secrets returned from Vaultwarden');
@@ -139,7 +138,7 @@ class SecretsManager {
       await this.authenticate();
     }
 
-    const secretsResponse = await this.client!.secrets().list(null);
+    const secretsResponse = await this.client!.secrets().list(undefined as unknown as string);
 
     if (!secretsResponse || !secretsResponse.data) {
       throw new Error('No secrets returned from Vaultwarden');

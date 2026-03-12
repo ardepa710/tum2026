@@ -96,9 +96,13 @@ model Tenant {
   sophosOrgId   String?  @map("sophos_org_id")
   sophosRegion  String?  @map("sophos_region")
   sophosApiHost String?  @map("sophos_api_host")
+  adAgentId     String?  @map("ad_agent_id")
+  adLastSyncAt  DateTime? @map("ad_last_sync_at")
   regDttm         DateTime         @default(now()) @map("reg_dttm")
   regUser         String           @map("reg_user")
   automationTasks    AutomationTask[]
+  adUsers            AdUser[]
+  adGroups           AdGroup[]
   taskRuns           TaskRun[]
   securitySnapshots  SecuritySnapshot[]
   deviceAssignments  DeviceAssignment[]
@@ -378,4 +382,66 @@ model Bookmark {
   @@unique([userId, entityType, entityId])
   @@index([userId])
   @@map("tbmbookmarks")
+}
+
+model AdUser {
+  id                Int       @id @default(autoincrement())
+  tenantId          Int       @map("tenant_id")
+  samAccountName    String    @map("sam_account_name")
+  objectGuid        String?   @map("object_guid")
+  displayName       String    @map("display_name")
+  name              String?
+  mail              String?
+  upn               String
+  accountEnabled    Boolean   @default(true) @map("account_enabled")
+  lockedOut         Boolean   @default(false) @map("locked_out")
+  jobTitle          String?   @map("job_title")
+  department        String?
+  description       String?
+  manager           String?
+  mobilePhone       String?   @map("mobile_phone")
+  building          String?
+  distinguishedName String?   @map("distinguished_name")
+  lastLogonDate     DateTime? @map("last_logon_date")
+  passwordLastSet   DateTime? @map("password_last_set")
+  passwordExpired   Boolean   @default(false) @map("password_expired")
+  createdInAd       DateTime? @map("created_in_ad")
+  syncedAt          DateTime  @default(now()) @map("synced_at")
+
+  tenant  Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  groups  AdGroupMember[]
+
+  @@unique([tenantId, samAccountName], name: "tenantId_samAccountName")
+  @@index([tenantId])
+  @@map("tbmusers_ad")
+}
+
+model AdGroup {
+  id             Int       @id @default(autoincrement())
+  tenantId       Int       @map("tenant_id")
+  samAccountName String    @map("sam_account_name")
+  displayName    String    @map("display_name")
+  description    String?
+  groupCategory  String    @default("Security") @map("group_category")
+  groupScope     String    @default("Global") @map("group_scope")
+  memberCount    Int       @default(0) @map("member_count")
+  syncedAt       DateTime  @default(now()) @map("synced_at")
+
+  tenant  Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  members AdGroupMember[]
+
+  @@unique([tenantId, samAccountName], name: "tenantId_samAccountName")
+  @@index([tenantId])
+  @@map("tbmgroups_ad")
+}
+
+model AdGroupMember {
+  groupId Int @map("group_id")
+  userId  Int @map("user_id")
+
+  group AdGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  AdUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([groupId, userId])
+  @@map("tbmgroup_members_ad")
 }
