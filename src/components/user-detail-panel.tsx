@@ -27,6 +27,9 @@ import {
   RefreshCw,
   ChevronDown,
   Monitor,
+  Lock,
+  Fingerprint,
+  Server,
 } from "lucide-react";
 import { BookmarkButton } from "@/components/bookmark-button";
 import { UserDeviceSection } from "@/components/user-device-section";
@@ -50,9 +53,34 @@ type AvailableTask = {
   tenantExclusive: string | null;
 };
 
+type AdUserSnapshot = {
+  samAccountName: string;
+  objectGuid: string | null;
+  upn: string;
+  mail: string | null;
+  accountEnabled: boolean;
+  lockedOut: boolean;
+  passwordExpired: boolean;
+  jobTitle: string | null;
+  department: string | null;
+  manager: string | null;
+  building: string | null;
+  mobilePhone: string | null;
+  distinguishedName: string | null;
+  lastLogonDate: string | null;
+  passwordLastSet: string | null;
+  createdInAd: string | null;
+  syncedAt: string;
+};
+
 type UserDetailPanelProps = {
   tenantId: string;
-  userId: string;
+  /** M365 Graph userId — kept for backward compat when called with userId only */
+  userId?: string;
+  /** AD samAccountName — when available, enables AD section */
+  userSam?: string;
+  /** User UPN — used for M365 Graph lookup */
+  userUpn?: string;
   userName: string;
   role: string;
   onClose: () => void;
@@ -61,11 +89,14 @@ type UserDetailPanelProps = {
 export function UserDetailPanel({
   tenantId,
   userId,
+  userSam,
+  userUpn,
   userName,
   role,
   onClose,
 }: UserDetailPanelProps) {
   const [data, setData] = useState<UserDetailResponse | null>(null);
+  const [adData, setAdData] = useState<AdUserSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [visible, setVisible] = useState(false);
@@ -100,40 +131,46 @@ export function UserDetailPanel({
     };
   }, []);
 
-  // Fetch user details
+  // Fetch M365 + AD details in parallel
   useEffect(() => {
     let cancelled = false;
 
     async function fetchDetails() {
-      try {
-        const res = await fetch(
-          `/api/tenants/${tenantId}/users/${userId}`
+      // Determine M365 lookup key: prefer userUpn, fallback to userId
+      const m365Key = userUpn || userId;
+
+      const fetches: Promise<void>[] = [];
+
+      // M365 fetch
+      if (m365Key) {
+        fetches.push(
+          fetch(`/api/tenants/${tenantId}/users/${encodeURIComponent(m365Key)}`)
+            .then((res) => {
+              if (!res.ok) return res.json().then((d) => Promise.reject(new Error(d.error || "Failed to fetch M365 details")));
+              return res.json();
+            })
+            .then((d: UserDetailResponse) => { if (!cancelled) setData(d); })
+            .catch((e) => { if (!cancelled) setError(e instanceof Error ? e.message : "Failed to fetch user details"); })
         );
-        if (cancelled) return;
-
-        if (!res.ok) {
-          const d = await res.json();
-          throw new Error(d.error || "Failed to fetch user details");
-        }
-
-        const d: UserDetailResponse = await res.json();
-        if (!cancelled) setData(d);
-      } catch (e) {
-        if (!cancelled) {
-          setError(
-            e instanceof Error ? e.message : "Failed to fetch user details"
-          );
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
       }
+
+      // AD fetch — only when SAM is available
+      if (userSam) {
+        fetches.push(
+          fetch(`/api/tenants/${tenantId}/ad/users/${encodeURIComponent(userSam)}`)
+            .then((res) => res.ok ? res.json() : null)
+            .then((d: AdUserSnapshot | null) => { if (!cancelled && d) setAdData(d); })
+            .catch(() => { /* AD data optional, silently ignore */ })
+        );
+      }
+
+      await Promise.allSettled(fetches);
+      if (!cancelled) setLoading(false);
     }
 
     fetchDetails();
-    return () => {
-      cancelled = true;
-    };
-  }, [tenantId, userId]);
+    return () => { cancelled = true; };
+  }, [tenantId, userId, userSam, userUpn]);
 
   // Fetch available tasks for the logged-in technician
   useEffect(() => {
@@ -203,7 +240,7 @@ export function UserDetailPanel({
               )}
               <BookmarkButton
                 entityType="ad_user"
-                entityId={`${tenantId}:${userId}`}
+                entityId={`${tenantId}:${userSam || userId}`}
                 label={userName}
                 metadata={{ email: data?.user?.mail }}
               />
@@ -307,7 +344,8 @@ export function UserDetailPanel({
           <div className="flex-1 overflow-y-auto">
             {loading && <SkeletonBody />}
             {error && !loading && <ErrorState message={error} />}
-            {data && !loading && !error && <DetailBody data={data} tenantId={tenantId} role={role} />}
+            {(data || adData) && !loading && !error && <DetailBody data={data} adData={adData} tenantId={tenantId} role={role} />}
+            {!data && !adData && !loading && !error && <ErrorState message="No data available for this user." />}
           </div>
         </div>
       </div>
@@ -319,132 +357,130 @@ export function UserDetailPanel({
 
 /* ─── Detail Body ─── */
 
-function DetailBody({ data, tenantId, role }: { data: UserDetailResponse; tenantId: string; role: string }) {
-  const { user, memberOf, licenses, mailboxSettings, manager } = data;
+function DetailBody({ data, adData, tenantId, role }: { data: UserDetailResponse | null; adData: AdUserSnapshot | null; tenantId: string; role: string }) {
+  const user = data?.user;
+  const memberOf = data?.memberOf ?? [];
+  const licenses = data?.licenses ?? [];
+  const mailboxSettings = data?.mailboxSettings ?? null;
+  const manager = data?.manager ?? null;
 
   return (
     <div className="p-6 space-y-6">
-      {/* Contact Info */}
-      <Section title="Contact" icon={<Mail className="w-4 h-4" />}>
-        <InfoRow icon={<Mail className="w-3.5 h-3.5" />} label="Email" value={user.mail} />
-        <InfoRow
-          icon={<Phone className="w-3.5 h-3.5" />}
-          label="Mobile"
-          value={user.mobilePhone}
-        />
-        {user.businessPhones?.length > 0 && (
-          <InfoRow
-            icon={<Phone className="w-3.5 h-3.5" />}
-            label="Business Phone"
-            value={user.businessPhones[0]}
-          />
-        )}
-        <InfoRow
-          icon={<MapPin className="w-3.5 h-3.5" />}
-          label="Office"
-          value={user.officeLocation}
-        />
-        <InfoRow
-          icon={<Building2 className="w-3.5 h-3.5" />}
-          label="Company"
-          value={user.companyName}
-        />
-        <InfoRow
-          icon={<UsersRound className="w-3.5 h-3.5" />}
-          label="Department"
-          value={user.department}
-        />
-      </Section>
 
-      {/* Account Details */}
-      <Section title="Account" icon={<Shield className="w-4 h-4" />}>
-        <InfoRow
-          icon={<Globe className="w-3.5 h-3.5" />}
-          label="UPN"
-          value={user.userPrincipalName}
-        />
-        <InfoRow
-          icon={<Calendar className="w-3.5 h-3.5" />}
-          label="Created"
-          value={formatDate(user.createdDateTime)}
-        />
-        <InfoRow
-          icon={<KeyRound className="w-3.5 h-3.5" />}
-          label="Last Password Change"
-          value={formatDate(user.lastPasswordChangeDateTime)}
-        />
-        {user.signInActivity && (
-          <InfoRow
-            icon={<LogIn className="w-3.5 h-3.5" />}
-            label="Last Sign-In"
-            value={formatDate(user.signInActivity.lastSignInDateTime)}
-          />
-        )}
-      </Section>
-
-      {/* Devices (RMM) */}
-      <Section title="Devices" icon={<Monitor className="w-4 h-4" />}>
-        <UserDeviceSection
-          tenantId={tenantId}
-          userUpn={user.userPrincipalName}
-          userName={user.displayName}
-          role={role}
-        />
-      </Section>
-
-      {/* Manager */}
-      <Section title="Manager" icon={<UserRound className="w-4 h-4" />}>
-        {manager ? (
-          <ManagerCard manager={manager} />
-        ) : (
-          <p className="text-sm text-[var(--text-muted)]">No manager assigned</p>
-        )}
-      </Section>
-
-      {/* Groups & Roles */}
-      <Section
-        title="Groups & Roles"
-        icon={<UsersRound className="w-4 h-4" />}
-        count={memberOf.length}
-      >
-        {memberOf.length === 0 ? (
-          <p className="text-sm text-[var(--text-muted)]">No group memberships</p>
-        ) : (
-          <div className="space-y-1.5 max-h-64 overflow-y-auto">
-            {memberOf.map((entry) => (
-              <MemberOfRow key={entry.id} entry={entry} />
-            ))}
+      {/* ── Active Directory Section ── */}
+      {adData && (
+        <Section title="Active Directory" icon={<Server className="w-4 h-4" />}>
+          <div className="space-y-0">
+            <InfoRow icon={<Fingerprint className="w-3.5 h-3.5" />} label="SAM Account" value={adData.samAccountName} />
+            <InfoRow icon={<Globe className="w-3.5 h-3.5" />} label="UPN" value={adData.upn} />
+            {adData.mail && <InfoRow icon={<Mail className="w-3.5 h-3.5" />} label="Email (AD)" value={adData.mail} />}
+            {adData.mobilePhone && <InfoRow icon={<Phone className="w-3.5 h-3.5" />} label="Mobile (AD)" value={adData.mobilePhone} />}
+            {adData.manager && <InfoRow icon={<UserRound className="w-3.5 h-3.5" />} label="Manager (AD)" value={adData.manager} />}
+            {adData.building && <InfoRow icon={<Building2 className="w-3.5 h-3.5" />} label="Building" value={adData.building} />}
+            <InfoRow
+              icon={adData.accountEnabled ? <Shield className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
+              label="AD Status"
+              value={
+                adData.lockedOut ? "Locked Out" :
+                !adData.accountEnabled ? "Disabled" :
+                adData.passwordExpired ? "Password Expired" : "Enabled"
+              }
+            />
+            <InfoRow icon={<Clock className="w-3.5 h-3.5" />} label="Last Logon" value={formatDate(adData.lastLogonDate)} />
+            <InfoRow icon={<KeyRound className="w-3.5 h-3.5" />} label="Pwd Last Set" value={formatDate(adData.passwordLastSet)} />
+            <InfoRow icon={<Calendar className="w-3.5 h-3.5" />} label="Created in AD" value={formatDate(adData.createdInAd)} />
+            <InfoRow icon={<Clock className="w-3.5 h-3.5" />} label="AD Sync" value={formatDate(adData.syncedAt)} />
           </div>
-        )}
-      </Section>
+        </Section>
+      )}
 
-      {/* Licenses */}
-      <Section
-        title="Licenses"
-        icon={<CreditCard className="w-4 h-4" />}
-        count={licenses.length}
-      >
-        {licenses.length === 0 ? (
-          <p className="text-sm text-[var(--text-muted)]">No licenses assigned</p>
-        ) : (
-          <div className="space-y-3">
-            {licenses.map((lic) => (
-              <LicenseCard key={lic.id} license={lic} />
-            ))}
-          </div>
-        )}
-      </Section>
+      {/* ── M365 sections — only when M365 data available ── */}
+      {!user && !adData && (
+        <div className="text-center py-4 text-sm text-[var(--text-muted)]">No data available.</div>
+      )}
 
-      {/* Mailbox Settings */}
-      <Section title="Mailbox" icon={<Inbox className="w-4 h-4" />}>
-        {mailboxSettings ? (
-          <MailboxCard settings={mailboxSettings} />
-        ) : (
-          <p className="text-sm text-[var(--text-muted)]">
-            Mailbox settings unavailable
-          </p>
-        )}
-      </Section>
+      {/* ── Microsoft 365 Sections ── */}
+      {user && (
+        <>
+          {/* Contact Info */}
+          <Section title="M365 Contact" icon={<Mail className="w-4 h-4" />}>
+            <InfoRow icon={<Mail className="w-3.5 h-3.5" />} label="Email" value={user.mail} />
+            <InfoRow icon={<Phone className="w-3.5 h-3.5" />} label="Mobile" value={user.mobilePhone} />
+            {user.businessPhones?.length > 0 && (
+              <InfoRow icon={<Phone className="w-3.5 h-3.5" />} label="Business Phone" value={user.businessPhones[0]} />
+            )}
+            <InfoRow icon={<MapPin className="w-3.5 h-3.5" />} label="Office" value={user.officeLocation} />
+            <InfoRow icon={<Building2 className="w-3.5 h-3.5" />} label="Company" value={user.companyName} />
+            <InfoRow icon={<UsersRound className="w-3.5 h-3.5" />} label="Department" value={user.department} />
+          </Section>
+
+          {/* Account Details */}
+          <Section title="M365 Account" icon={<Shield className="w-4 h-4" />}>
+            <InfoRow icon={<Globe className="w-3.5 h-3.5" />} label="UPN" value={user.userPrincipalName} />
+            <InfoRow icon={<Calendar className="w-3.5 h-3.5" />} label="Created" value={formatDate(user.createdDateTime)} />
+            <InfoRow icon={<KeyRound className="w-3.5 h-3.5" />} label="Last Pwd Change" value={formatDate(user.lastPasswordChangeDateTime)} />
+            {user.signInActivity && (
+              <InfoRow icon={<LogIn className="w-3.5 h-3.5" />} label="Last Sign-In" value={formatDate(user.signInActivity.lastSignInDateTime)} />
+            )}
+          </Section>
+
+          {/* Devices (RMM) */}
+          <Section title="Devices" icon={<Monitor className="w-4 h-4" />}>
+            <UserDeviceSection
+              tenantId={tenantId}
+              userUpn={user.userPrincipalName}
+              userName={user.displayName}
+              role={role}
+            />
+          </Section>
+
+          {/* Manager */}
+          <Section title="Manager" icon={<UserRound className="w-4 h-4" />}>
+            {manager ? (
+              <ManagerCard manager={manager} />
+            ) : (
+              <p className="text-sm text-[var(--text-muted)]">No manager assigned</p>
+            )}
+          </Section>
+
+          {/* Groups & Roles */}
+          <Section title="Groups & Roles" icon={<UsersRound className="w-4 h-4" />} count={memberOf.length}>
+            {memberOf.length === 0 ? (
+              <p className="text-sm text-[var(--text-muted)]">No group memberships</p>
+            ) : (
+              <div className="space-y-1.5 max-h-64 overflow-y-auto">
+                {memberOf.map((entry) => (
+                  <MemberOfRow key={entry.id} entry={entry} />
+                ))}
+              </div>
+            )}
+          </Section>
+
+          {/* Licenses */}
+          <Section title="Licenses" icon={<CreditCard className="w-4 h-4" />} count={licenses.length}>
+            {licenses.length === 0 ? (
+              <p className="text-sm text-[var(--text-muted)]">No licenses assigned</p>
+            ) : (
+              <div className="space-y-3">
+                {licenses.map((lic) => (
+                  <LicenseCard key={lic.id} license={lic} />
+                ))}
+              </div>
+            )}
+          </Section>
+
+          {/* Mailbox Settings */}
+          <Section title="Mailbox" icon={<Inbox className="w-4 h-4" />}>
+            {mailboxSettings ? (
+              <MailboxCard settings={mailboxSettings} />
+            ) : (
+              <p className="text-sm text-[var(--text-muted)]">
+                Mailbox settings unavailable
+              </p>
+            )}
+          </Section>
+        </>
+      )}
     </div>
   );
 }

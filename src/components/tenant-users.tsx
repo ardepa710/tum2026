@@ -10,17 +10,22 @@ import {
   AlertTriangle,
   Building2,
   Search,
+  Lock,
 } from "lucide-react";
 import { UserDetailPanel } from "@/components/user-detail-panel";
 
 type ADUser = {
-  id: string;
+  id: number;
+  samAccountName: string;
   displayName: string;
   mail: string | null;
-  userPrincipalName: string;
-  accountEnabled: boolean;
+  upn: string;
   jobTitle: string | null;
   department: string | null;
+  accountEnabled: boolean;
+  lockedOut: boolean;
+  passwordExpired: boolean;
+  lastLogonDate: string | null;
 };
 
 type TenantOption = {
@@ -29,16 +34,19 @@ type TenantOption = {
   tenantAbbrv: string;
 };
 
+type SelectedUser = {
+  sam: string;
+  upn: string;
+  displayName: string;
+};
+
 export function TenantUsers({ tenants, role }: { tenants: TenantOption[]; role: string }) {
   const [selectedTenantId, setSelectedTenantId] = useState("");
   const [users, setUsers] = useState<ADUser[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
-  const [selectedUser, setSelectedUser] = useState<{
-    id: string;
-    displayName: string;
-  } | null>(null);
+  const [selectedUser, setSelectedUser] = useState<SelectedUser | null>(null);
   const fetchIdRef = useRef(0);
 
   const handleTenantChange = useCallback(async (tenantId: string) => {
@@ -56,7 +64,7 @@ export function TenantUsers({ tenants, role }: { tenants: TenantOption[]; role: 
     setError(null);
 
     try {
-      const res = await fetch(`/api/tenants/${tenantId}/users`);
+      const res = await fetch(`/api/tenants/${tenantId}/ad/users`);
       if (currentFetchId !== fetchIdRef.current) return;
 
       if (!res.ok) {
@@ -82,7 +90,9 @@ export function TenantUsers({ tenants, role }: { tenants: TenantOption[]; role: 
     ? users.filter(
         (u) =>
           u.displayName.toLowerCase().includes(filter.toLowerCase()) ||
-          (u.mail || u.userPrincipalName).toLowerCase().includes(filter.toLowerCase()) ||
+          (u.samAccountName).toLowerCase().includes(filter.toLowerCase()) ||
+          (u.mail || "").toLowerCase().includes(filter.toLowerCase()) ||
+          u.upn.toLowerCase().includes(filter.toLowerCase()) ||
           (u.jobTitle || "").toLowerCase().includes(filter.toLowerCase()) ||
           (u.department || "").toLowerCase().includes(filter.toLowerCase())
       )
@@ -113,7 +123,6 @@ export function TenantUsers({ tenants, role }: { tenants: TenantOption[]; role: 
           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)] pointer-events-none" />
         </div>
 
-        {/* Search filter - only visible when users loaded */}
         {users.length > 0 && !loading && (
           <div className="relative flex-1 max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)] pointer-events-none" />
@@ -128,22 +137,19 @@ export function TenantUsers({ tenants, role }: { tenants: TenantOption[]; role: 
         )}
       </div>
 
-      {/* No tenant selected */}
+      {/* Empty states */}
       {!selectedTenantId && (
         <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-12 text-center">
           <div className="w-14 h-14 bg-[var(--bg-hover)] rounded-2xl flex items-center justify-center mx-auto mb-4">
             <Building2 className="w-7 h-7 text-[var(--text-muted)]" />
           </div>
-          <h4 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
-            Select a Tenant
-          </h4>
+          <h4 className="text-lg font-semibold text-[var(--text-primary)] mb-2">Select a Tenant</h4>
           <p className="text-sm text-[var(--text-muted)] max-w-md mx-auto">
             Choose a tenant from the dropdown above to view its Active Directory users.
           </p>
         </div>
       )}
 
-      {/* Loading */}
       {loading && (
         <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-12 text-center">
           <Loader2 className="w-8 h-8 text-[var(--accent)] animate-spin mx-auto mb-4" />
@@ -153,33 +159,26 @@ export function TenantUsers({ tenants, role }: { tenants: TenantOption[]; role: 
         </div>
       )}
 
-      {/* Error */}
       {error && !loading && (
         <div className="bg-[var(--error)]/10 border border-[var(--error)]/20 rounded-xl p-6">
           <div className="flex items-center gap-3">
             <AlertTriangle className="w-5 h-5 text-[var(--error)]" />
             <div>
-              <p className="text-sm font-medium text-[var(--error)]">
-                Failed to load users
-              </p>
+              <p className="text-sm font-medium text-[var(--error)]">Failed to load users</p>
               <p className="text-xs text-[var(--error)]/70 mt-1">{error}</p>
             </div>
           </div>
         </div>
       )}
 
-      {/* No users found */}
       {!loading && !error && selectedTenantId && users.length === 0 && (
         <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-12 text-center">
           <div className="w-14 h-14 bg-[var(--warning)]/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <Users className="w-7 h-7 text-[var(--warning)]" />
           </div>
-          <h4 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
-            No Users Found
-          </h4>
+          <h4 className="text-lg font-semibold text-[var(--text-primary)] mb-2">No Users Found</h4>
           <p className="text-sm text-[var(--text-muted)] max-w-md mx-auto">
-            No Active Directory users were returned for this tenant. Verify the
-            Enterprise App is installed and has the required permissions.
+            No Active Directory users synced for this tenant. Run the nightly AD sync first.
           </p>
         </div>
       )}
@@ -187,7 +186,6 @@ export function TenantUsers({ tenants, role }: { tenants: TenantOption[]; role: 
       {/* Users table */}
       {!loading && !error && users.length > 0 && (
         <>
-          {/* Counter */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Users className="w-5 h-5" style={{ color: "var(--accent)" }} />
@@ -202,7 +200,6 @@ export function TenantUsers({ tenants, role }: { tenants: TenantOption[]; role: 
             </span>
           </div>
 
-          {/* Table */}
           <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -212,13 +209,13 @@ export function TenantUsers({ tenants, role }: { tenants: TenantOption[]; role: 
                       Display Name
                     </th>
                     <th className="text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider px-5 py-3">
-                      Email / UPN
-                    </th>
-                    <th className="text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider px-5 py-3">
-                      Job Title
+                      SAM / Email
                     </th>
                     <th className="text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider px-5 py-3">
                       Department
+                    </th>
+                    <th className="text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider px-5 py-3">
+                      Last Logon
                     </th>
                     <th className="text-center text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider px-5 py-3">
                       Status
@@ -231,44 +228,63 @@ export function TenantUsers({ tenants, role }: { tenants: TenantOption[]; role: 
                       key={user.id}
                       onClick={() =>
                         setSelectedUser({
-                          id: user.id,
+                          sam: user.samAccountName,
+                          upn: user.upn,
                           displayName: user.displayName,
                         })
                       }
                       className="hover:bg-[var(--bg-hover)] transition-colors cursor-pointer"
                     >
                       <td className="px-5 py-3">
-                        <span className="text-sm font-medium text-[var(--text-primary)]">
+                        <p className="text-sm font-medium text-[var(--text-primary)]">
                           {user.displayName}
-                        </span>
+                        </p>
+                        {user.jobTitle && (
+                          <p className="text-xs text-[var(--text-muted)]">{user.jobTitle}</p>
+                        )}
                       </td>
                       <td className="px-5 py-3">
-                        <span className="text-sm text-[var(--text-secondary)]">
-                          {user.mail || user.userPrincipalName}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3">
-                        <span className="text-sm text-[var(--text-secondary)]">
-                          {user.jobTitle || "\u2014"}
-                        </span>
+                        <p className="text-xs font-mono text-[var(--text-secondary)]">
+                          {user.samAccountName}
+                        </p>
+                        {user.mail && (
+                          <p className="text-xs text-[var(--text-muted)]">{user.mail}</p>
+                        )}
                       </td>
                       <td className="px-5 py-3">
                         <span className="text-sm text-[var(--text-secondary)]">
                           {user.department || "\u2014"}
                         </span>
                       </td>
-                      <td className="px-5 py-3 text-center">
-                        {user.accountEnabled ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-[var(--success)]/10 text-[var(--success)]">
-                            <CheckCircle2 className="w-3 h-3" />
-                            Enabled
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-[var(--error)]/10 text-[var(--error)]">
-                            <XCircle className="w-3 h-3" />
-                            Disabled
-                          </span>
-                        )}
+                      <td className="px-5 py-3">
+                        <span className="text-xs text-[var(--text-muted)]">
+                          {user.lastLogonDate
+                            ? new Date(user.lastLogonDate).toLocaleDateString()
+                            : "\u2014"}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3">
+                        <div className="flex flex-col items-center gap-1">
+                          {user.accountEnabled ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-[var(--success)]/10 text-[var(--success)]">
+                              <CheckCircle2 className="w-3 h-3" /> Enabled
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-[var(--error)]/10 text-[var(--error)]">
+                              <XCircle className="w-3 h-3" /> Disabled
+                            </span>
+                          )}
+                          {user.lockedOut && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-[var(--warning)]/10 text-[var(--warning)]">
+                              <Lock className="w-3 h-3" /> Locked
+                            </span>
+                          )}
+                          {user.passwordExpired && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-[var(--warning)]/10 text-[var(--warning)]">
+                              <AlertTriangle className="w-3 h-3" /> Pwd Expired
+                            </span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -278,11 +294,13 @@ export function TenantUsers({ tenants, role }: { tenants: TenantOption[]; role: 
           </div>
         </>
       )}
+
       {/* User Detail Panel */}
       {selectedUser && selectedTenantId && (
         <UserDetailPanel
           tenantId={selectedTenantId}
-          userId={selectedUser.id}
+          userSam={selectedUser.sam}
+          userUpn={selectedUser.upn}
           userName={selectedUser.displayName}
           role={role}
           onClose={() => setSelectedUser(null)}

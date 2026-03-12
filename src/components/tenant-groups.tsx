@@ -8,18 +8,20 @@ import {
   AlertTriangle,
   Building2,
   Search,
+  Shield,
   Mail,
-  Tag,
+  Users,
 } from "lucide-react";
 import { GroupDetailPanel } from "@/components/group-detail-panel";
 
 type ADGroup = {
-  id: string;
+  id: number;
+  samAccountName: string;
   displayName: string;
   description: string | null;
-  mail: string | null;
-  groupTypes: string[];
-  membershipRule: string | null;
+  groupCategory: string;
+  groupScope: string;
+  memberCount: number;
 };
 
 type TenantOption = {
@@ -28,16 +30,18 @@ type TenantOption = {
   tenantAbbrv: string;
 };
 
+type SelectedGroup = {
+  sam: string;
+  displayName: string;
+};
+
 export function TenantGroups({ tenants }: { tenants: TenantOption[] }) {
   const [selectedTenantId, setSelectedTenantId] = useState("");
   const [groups, setGroups] = useState<ADGroup[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
-  const [selectedGroup, setSelectedGroup] = useState<{
-    id: string;
-    displayName: string;
-  } | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<SelectedGroup | null>(null);
   const fetchIdRef = useRef(0);
 
   const handleTenantChange = useCallback(async (tenantId: string) => {
@@ -55,7 +59,7 @@ export function TenantGroups({ tenants }: { tenants: TenantOption[] }) {
     setError(null);
 
     try {
-      const res = await fetch(`/api/tenants/${tenantId}/groups`);
+      const res = await fetch(`/api/tenants/${tenantId}/ad/groups`);
       if (currentFetchId !== fetchIdRef.current) return;
 
       if (!res.ok) {
@@ -81,8 +85,8 @@ export function TenantGroups({ tenants }: { tenants: TenantOption[] }) {
     ? groups.filter(
         (g) =>
           g.displayName.toLowerCase().includes(filter.toLowerCase()) ||
-          (g.description || "").toLowerCase().includes(filter.toLowerCase()) ||
-          (g.mail || "").toLowerCase().includes(filter.toLowerCase())
+          g.samAccountName.toLowerCase().includes(filter.toLowerCase()) ||
+          (g.description || "").toLowerCase().includes(filter.toLowerCase())
       )
     : groups;
 
@@ -111,7 +115,6 @@ export function TenantGroups({ tenants }: { tenants: TenantOption[] }) {
           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)] pointer-events-none" />
         </div>
 
-        {/* Search filter */}
         {groups.length > 0 && !loading && (
           <div className="relative flex-1 max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)] pointer-events-none" />
@@ -126,22 +129,19 @@ export function TenantGroups({ tenants }: { tenants: TenantOption[] }) {
         )}
       </div>
 
-      {/* No tenant selected */}
+      {/* Empty states */}
       {!selectedTenantId && (
         <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-12 text-center">
           <div className="w-14 h-14 bg-[var(--bg-hover)] rounded-2xl flex items-center justify-center mx-auto mb-4">
             <Building2 className="w-7 h-7 text-[var(--text-muted)]" />
           </div>
-          <h4 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
-            Select a Tenant
-          </h4>
+          <h4 className="text-lg font-semibold text-[var(--text-primary)] mb-2">Select a Tenant</h4>
           <p className="text-sm text-[var(--text-muted)] max-w-md mx-auto">
             Choose a tenant from the dropdown above to view its Active Directory groups.
           </p>
         </div>
       )}
 
-      {/* Loading */}
       {loading && (
         <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-12 text-center">
           <Loader2 className="w-8 h-8 text-[var(--accent)] animate-spin mx-auto mb-4" />
@@ -151,33 +151,26 @@ export function TenantGroups({ tenants }: { tenants: TenantOption[] }) {
         </div>
       )}
 
-      {/* Error */}
       {error && !loading && (
         <div className="bg-[var(--error)]/10 border border-[var(--error)]/20 rounded-xl p-6">
           <div className="flex items-center gap-3">
             <AlertTriangle className="w-5 h-5 text-[var(--error)]" />
             <div>
-              <p className="text-sm font-medium text-[var(--error)]">
-                Failed to load groups
-              </p>
+              <p className="text-sm font-medium text-[var(--error)]">Failed to load groups</p>
               <p className="text-xs text-[var(--error)]/70 mt-1">{error}</p>
             </div>
           </div>
         </div>
       )}
 
-      {/* No groups found */}
       {!loading && !error && selectedTenantId && groups.length === 0 && (
         <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-12 text-center">
           <div className="w-14 h-14 bg-[var(--warning)]/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <UsersRound className="w-7 h-7 text-[var(--warning)]" />
           </div>
-          <h4 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
-            No Groups Found
-          </h4>
+          <h4 className="text-lg font-semibold text-[var(--text-primary)] mb-2">No Groups Found</h4>
           <p className="text-sm text-[var(--text-muted)] max-w-md mx-auto">
-            No Active Directory groups were returned for this tenant. Verify the
-            Enterprise App is installed and has the required permissions.
+            No Active Directory groups synced for this tenant. Run the nightly AD sync first.
           </p>
         </div>
       )}
@@ -185,7 +178,6 @@ export function TenantGroups({ tenants }: { tenants: TenantOption[] }) {
       {/* Groups table */}
       {!loading && !error && groups.length > 0 && (
         <>
-          {/* Counter */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <UsersRound className="w-5 h-5" style={{ color: "var(--accent)" }} />
@@ -200,23 +192,22 @@ export function TenantGroups({ tenants }: { tenants: TenantOption[] }) {
             </span>
           </div>
 
-          {/* Table */}
           <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-[var(--border)]">
                     <th className="text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider px-5 py-3">
-                      Display Name
+                      Group Name
                     </th>
                     <th className="text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider px-5 py-3">
                       Description
                     </th>
                     <th className="text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider px-5 py-3">
-                      Mail
+                      Type / Scope
                     </th>
-                    <th className="text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider px-5 py-3">
-                      Group Types
+                    <th className="text-center text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider px-5 py-3">
+                      Members
                     </th>
                   </tr>
                 </thead>
@@ -226,16 +217,19 @@ export function TenantGroups({ tenants }: { tenants: TenantOption[] }) {
                       key={group.id}
                       onClick={() =>
                         setSelectedGroup({
-                          id: group.id,
+                          sam: group.samAccountName,
                           displayName: group.displayName,
                         })
                       }
                       className="hover:bg-[var(--bg-hover)] transition-colors cursor-pointer"
                     >
                       <td className="px-5 py-3">
-                        <span className="text-sm font-medium text-[var(--text-primary)]">
+                        <p className="text-sm font-medium text-[var(--text-primary)]">
                           {group.displayName}
-                        </span>
+                        </p>
+                        <p className="text-xs font-mono text-[var(--text-muted)]">
+                          {group.samAccountName}
+                        </p>
                       </td>
                       <td className="px-5 py-3">
                         <span className="text-sm text-[var(--text-secondary)] line-clamp-2">
@@ -243,34 +237,36 @@ export function TenantGroups({ tenants }: { tenants: TenantOption[] }) {
                         </span>
                       </td>
                       <td className="px-5 py-3">
-                        {group.mail ? (
-                          <span className="inline-flex items-center gap-1.5 text-sm text-[var(--text-secondary)]">
-                            <Mail className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-                            {group.mail}
+                        <div className="flex flex-col gap-1">
+                          <span
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium w-fit ${
+                              group.groupCategory === "Security"
+                                ? "bg-[var(--accent)]/10 text-[var(--accent)]"
+                                : "bg-[var(--success)]/10 text-[var(--success)]"
+                            }`}
+                          >
+                            {group.groupCategory === "Security" ? (
+                              <Shield className="w-3 h-3" />
+                            ) : (
+                              <Mail className="w-3 h-3" />
+                            )}
+                            {group.groupCategory}
                           </span>
-                        ) : (
-                          <span className="text-sm text-[var(--text-muted)]">
-                            {"\u2014"}
-                          </span>
-                        )}
+                          <span className="text-xs text-[var(--text-muted)]">{group.groupScope}</span>
+                        </div>
                       </td>
-                      <td className="px-5 py-3">
-                        {group.groupTypes && group.groupTypes.length > 0 ? (
-                          <div className="flex flex-wrap gap-1">
-                            {group.groupTypes.map((type) => (
-                              <span
-                                key={type}
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-[var(--accent)]/10 text-[var(--accent)]"
-                              >
-                                <Tag className="w-3 h-3" />
-                                {type}
-                              </span>
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="text-xs text-[var(--text-muted)]">
-                            Security Group
-                          </span>
+                      <td className="px-5 py-3 text-center">
+                        <span
+                          className={`text-sm font-semibold ${
+                            group.memberCount === 0
+                              ? "text-[var(--warning)]"
+                              : "text-[var(--text-primary)]"
+                          }`}
+                        >
+                          {group.memberCount}
+                        </span>
+                        {group.memberCount === 0 && (
+                          <p className="text-[10px] text-[var(--warning)]">empty</p>
                         )}
                       </td>
                     </tr>
@@ -281,11 +277,12 @@ export function TenantGroups({ tenants }: { tenants: TenantOption[] }) {
           </div>
         </>
       )}
+
       {/* Group Detail Panel */}
       {selectedGroup && selectedTenantId && (
         <GroupDetailPanel
           tenantId={selectedTenantId}
-          groupId={selectedGroup.id}
+          groupSam={selectedGroup.sam}
           groupName={selectedGroup.displayName}
           onClose={() => setSelectedGroup(null)}
         />
