@@ -6,6 +6,7 @@ import {
   getUserLicenseDetails,
   getUserMailboxSettings,
   getUserManager,
+  getUserSignInActivity,
 } from "@/lib/graph";
 import type { UserDetailResponse } from "@/lib/types/user-detail";
 
@@ -29,25 +30,32 @@ export async function GET(
   }
 
   try {
-    const [userResult, memberOfResult, licensesResult, mailboxResult, managerResult] =
+    const [userResult, memberOfResult, licensesResult, mailboxResult, managerResult, signInResult] =
       await Promise.allSettled([
         getUserDetail(tenantId, userId),
         getUserMemberOf(tenantId, userId),
         getUserLicenseDetails(tenantId, userId),
         getUserMailboxSettings(tenantId, userId),
         getUserManager(tenantId, userId),
+        getUserSignInActivity(tenantId, userId),
       ]);
 
     // User profile is required — if it fails, return 404
     if (userResult.status === "rejected" || !userResult.value) {
+      const reason = userResult.status === "rejected" ? (userResult.reason as Error)?.message : "User not found";
       return NextResponse.json(
-        { error: "User not found" },
+        { error: reason || "User not found" },
         { status: 404 }
       );
     }
 
+    const userValue = userResult.value;
+    if (signInResult.status === "fulfilled" && signInResult.value) {
+      userValue.signInActivity = signInResult.value;
+    }
+
     const response: UserDetailResponse = {
-      user: userResult.value,
+      user: userValue,
       memberOf:
         memberOfResult.status === "fulfilled" ? memberOfResult.value : [],
       licenses:

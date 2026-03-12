@@ -109,11 +109,27 @@ export async function getUserDetail(tenantId: number, userId: string) {
     .select(
       "id,displayName,mail,userPrincipalName,accountEnabled,jobTitle," +
       "department,companyName,officeLocation,mobilePhone,businessPhones," +
-      "createdDateTime,lastPasswordChangeDateTime,signInActivity"
+      "createdDateTime,lastPasswordChangeDateTime"
     )
     .get();
 
   return response;
+}
+
+// Requires AuditLog.Read.All — fetched separately so its absence doesn't break the main user fetch
+export async function getUserSignInActivity(tenantId: number, userId: string) {
+  const client = await getGraphClient(tenantId);
+  if (!client) return null;
+
+  try {
+    const response = await client
+      .api(`/users/${userId}`)
+      .select("signInActivity")
+      .get();
+    return response?.signInActivity ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export async function getUserMemberOf(tenantId: number, userId: string) {
