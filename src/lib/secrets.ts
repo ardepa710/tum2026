@@ -1,230 +1,184 @@
 /**
- * Secrets Manager - Secure secrets retrieval from Vaultwarden
+ * Secrets Manager — Password Manager vault via Bitwarden SDK
  *
- * This module provides a centralized interface to retrieve secrets from
- * Vaultwarden (self-hosted Bitwarden) using the Bitwarden SDK.
+ * Uses the Bitwarden SDK's low-level runCommand() to authenticate with
+ * the Vaultwarden Password Manager (not Secrets Manager) using a User
+ * API Key + master password. After login, syncs the vault once per cold
+ * start and reads Login items from a specific collection by item name.
  *
- * Features:
- * - Singleton pattern for global client instance
- * - 1-hour in-memory cache to minimize API calls
- * - Automatic fallback to environment variables in development
- * - Type-safe secret retrieval
+ * Vault item convention:
+ *   - Item type: Login
+ *   - Name: the environment variable key (e.g. "NINJA_CLIENT_ID")
+ *   - Password field: the secret value
+ *   - Collection: VAULTWARDEN_COLLECTION_ID
  *
- * Usage:
- *   import { getSecret } from '@/lib/secrets';
- *   const authSecret = await getSecret('AUTH_SECRET');
+ * Required env vars (bootstrap — stay in Vercel):
+ *   VAULTWARDEN_URL           https://pwd.ardepa.site
+ *   VAULTWARDEN_CLIENT_ID     user.xxxxxxxx-... (from vault profile → API Key)
+ *   VAULTWARDEN_CLIENT_SECRET the client_secret from vault profile → API Key
+ *   VAULTWARDEN_MASTER_PASSWORD master password of the vault user
+ *   VAULTWARDEN_COLLECTION_ID  UUID of the TUM2026 collection
  *
- * @see /docs/security/vaultwarden-setup.md
+ * In development: if any of the above is missing, falls back to process.env[key].
  */
 
-import {
-  BitwardenClient,
-  ClientSettings,
-  DeviceType,
-} from '@bitwarden/sdk-napi';
+import { BitwardenClient, DeviceType } from "@bitwarden/sdk-napi";
+import type { ClientSettings } from "@bitwarden/sdk-napi/dist/bitwarden_client/schemas";
 
-interface SecretCache {
-  value: string;
-  expiresAt: number;
+// ---------------------------------------------------------------------------
+// Types for runCommand JSON protocol
+// ---------------------------------------------------------------------------
+
+interface RunCommandResponse<T> {
+  success: boolean;
+  errorMessage?: string;
+  data?: T;
 }
 
-class SecretsManager {
-  private cache = new Map<string, SecretCache>();
-  private client: BitwardenClient | null = null;
-  private readonly CACHE_TTL = 3600000; // 1 hour in milliseconds
-  private authenticated = false;
-
-  async authenticate(): Promise<void> {
-    if (this.authenticated && this.client) {
-      return; // Already authenticated
-    }
-
-    const vaultwardenUrl = process.env.VAULTWARDEN_URL;
-    const accessToken = process.env.VAULTWARDEN_ACCESS_TOKEN;
-
-    if (!vaultwardenUrl || !accessToken) {
-      throw new Error(
-        'Vaultwarden credentials not configured. Set VAULTWARDEN_URL and VAULTWARDEN_ACCESS_TOKEN in environment variables.'
-      );
-    }
-
-    // Initialize Bitwarden client with Vaultwarden URL
-    const settings: ClientSettings = {
-      apiUrl: vaultwardenUrl,
-      identityUrl: vaultwardenUrl,
-      deviceType: DeviceType.SDK,
-      userAgent: 'TUM2026',
-    };
-
-    this.client = new BitwardenClient(settings, 2); // 2 = LogLevel.Info
-
-    // Authenticate with access token
-    // Note: Vaultwarden doesn't require a state file path for service account tokens
-    await this.client.auth().loginAccessToken(accessToken, undefined);
-
-    this.authenticated = true;
-
-    // authenticated
-  }
-
-  async getSecret(key: string): Promise<string> {
-    // Check cache first
-    const cached = this.cache.get(key);
-    if (cached && cached.expiresAt > Date.now()) {
-      return cached.value;
-    }
-
-    // Try to fetch from Vaultwarden
-    try {
-      if (!this.authenticated || !this.client) {
-        await this.authenticate();
-      }
-
-      // List all secrets and find the one we want by name
-      // The Bitwarden SDK returns secrets with IDs, but we need to search by name
-      const secretsResponse = await this.client!.secrets().list(undefined as unknown as string);
-
-      if (!secretsResponse || !secretsResponse.data) {
-        throw new Error('No secrets returned from Vaultwarden');
-      }
-
-      // Find secret by key (name)
-      const secretItem = secretsResponse.data.find(
-        (item: any) => item.key === key
-      );
-
-      if (!secretItem) {
-        throw new Error(`Secret not found in Vaultwarden: ${key}`);
-      }
-
-      // Get the full secret details
-      const secretDetails = await this.client!.secrets().get(secretItem.id);
-
-      if (!secretDetails || !secretDetails.value) {
-        throw new Error(`Secret value is empty for: ${key}`);
-      }
-
-      const secretValue = secretDetails.value;
-
-      // Cache for 1 hour
-      this.cache.set(key, {
-        value: secretValue,
-        expiresAt: Date.now() + this.CACHE_TTL,
-      });
-
-      // cached
-
-      return secretValue;
-    } catch (error) {
-      // Fallback to env vars in development only
-      if (process.env.NODE_ENV === 'development') {
-        const fallback = process.env[key];
-        if (fallback) return fallback;
-      }
-
-      throw new Error(
-        `Failed to retrieve secret: ${key}. ${error instanceof Error ? error.message : String(error)}`
-      );
-    }
-  }
-
-  async getAllSecrets(): Promise<Record<string, string>> {
-    if (!this.authenticated || !this.client) {
-      await this.authenticate();
-    }
-
-    const secretsResponse = await this.client!.secrets().list(undefined as unknown as string);
-
-    if (!secretsResponse || !secretsResponse.data) {
-      throw new Error('No secrets returned from Vaultwarden');
-    }
-
-    const result: Record<string, string> = {};
-
-    // Fetch full details for each secret
-    for (const item of secretsResponse.data) {
-      const secretDetails = await this.client!.secrets().get(item.id);
-      if (secretDetails && secretDetails.key && secretDetails.value) {
-        result[secretDetails.key] = secretDetails.value;
-      }
-    }
-
-    return result;
-  }
-
-  clearCache(): void {
-    this.cache.clear();
-  }
-
-  disconnect(): void {
-    if (this.client) {
-      this.client = null;
-      this.authenticated = false;
-    }
-  }
+interface SyncCipher {
+  name: string;
+  collectionIds: string[];
+  login?: { password?: string | null } | null;
 }
 
-// Singleton instance
-let secretsManager: SecretsManager | null = null;
+interface SyncData {
+  ciphers: SyncCipher[];
+}
+
+// ---------------------------------------------------------------------------
+// 1-hour in-memory cache
+// ---------------------------------------------------------------------------
+
+const cache = new Map<string, { value: string; expiresAt: number }>();
+const CACHE_TTL = 3_600_000; // 1 hour
+
+// ---------------------------------------------------------------------------
+// Internal helpers
+// ---------------------------------------------------------------------------
+
+function isConfigured(): boolean {
+  return !!(
+    process.env.VAULTWARDEN_URL &&
+    process.env.VAULTWARDEN_CLIENT_ID &&
+    process.env.VAULTWARDEN_CLIENT_SECRET &&
+    process.env.VAULTWARDEN_MASTER_PASSWORD &&
+    process.env.VAULTWARDEN_COLLECTION_ID
+  );
+}
+
+function buildClient(): BitwardenClient {
+  const vaultUrl = process.env.VAULTWARDEN_URL!.replace(/\/$/, "");
+  const settings: ClientSettings = {
+    apiUrl: `${vaultUrl}/api`,
+    identityUrl: `${vaultUrl}/identity`,
+    deviceType: DeviceType.SDK,
+    userAgent: "TUM2026",
+  };
+  // LogLevel 2 = Info
+  return new BitwardenClient(settings, 2);
+}
+
+async function runCmd<T>(
+  client: BitwardenClient,
+  command: object,
+): Promise<T> {
+  // runCommand is on the underlying rust binding (.client property)
+  const raw = await (client as unknown as {
+    client: { runCommand(s: string): Promise<string> };
+  }).client.runCommand(JSON.stringify(command));
+
+  const res = JSON.parse(raw) as RunCommandResponse<T>;
+  if (!res.success) {
+    throw new Error(res.errorMessage ?? "Bitwarden command failed");
+  }
+  return res.data as T;
+}
+
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
 
 /**
- * Initialize the secrets manager
- * Must be called before using getSecret() or getAllSecrets()
- */
-export async function initSecrets(): Promise<void> {
-  if (!secretsManager) {
-    secretsManager = new SecretsManager();
-    await secretsManager.authenticate();
-  }
-}
-
-/**
- * Retrieve a single secret from Vaultwarden
- * Automatically initializes the manager if not already done
- * Caches results for 1 hour
+ * Fetch ALL secrets from the Vaultwarden collection in a single auth+sync.
+ * Populates the in-memory cache. Called by instrumentation.ts at cold start.
  *
- * @param key - The secret name (e.g., 'AUTH_SECRET')
- * @returns The secret value
- * @throws Error if secret not found or authentication fails
- */
-export async function getSecret(key: string): Promise<string> {
-  if (!secretsManager) {
-    await initSecrets();
-  }
-  return secretsManager!.getSecret(key);
-}
-
-/**
- * Retrieve all secrets from Vaultwarden
- * Useful for bulk loading at application startup
- *
- * @returns Object mapping secret names to values
+ * @returns Record mapping item name → password value for every Login item
+ *          found in VAULTWARDEN_COLLECTION_ID.
  */
 export async function getAllSecrets(): Promise<Record<string, string>> {
-  if (!secretsManager) {
-    await initSecrets();
+  if (!isConfigured()) {
+    if (process.env.NODE_ENV === "production") {
+      console.error("[secrets] Vaultwarden not configured — no secrets loaded");
+    }
+    return {};
   }
-  return secretsManager!.getAllSecrets();
+
+  const client = buildClient();
+
+  // 1. Authenticate (API Key + master password for vault decryption)
+  await runCmd(client, {
+    apiKeyLogin: {
+      clientId: process.env.VAULTWARDEN_CLIENT_ID!,
+      clientSecret: process.env.VAULTWARDEN_CLIENT_SECRET!,
+      password: process.env.VAULTWARDEN_MASTER_PASSWORD!,
+    },
+  });
+
+  // 2. Sync vault — SDK decrypts items client-side using the derived master key
+  const syncData = await runCmd<SyncData>(client, {
+    sync: { excludeSubdomains: true },
+  });
+
+  const collectionId = process.env.VAULTWARDEN_COLLECTION_ID!;
+  const result: Record<string, string> = {};
+
+  for (const cipher of syncData.ciphers ?? []) {
+    if (
+      cipher.collectionIds.includes(collectionId) &&
+      cipher.login?.password
+    ) {
+      result[cipher.name] = cipher.login.password;
+      cache.set(cipher.name, {
+        value: cipher.login.password,
+        expiresAt: Date.now() + CACHE_TTL,
+      });
+    }
+  }
+
+  return result;
 }
 
 /**
- * Clear the in-memory secret cache
- * Forces fresh retrieval from Vaultwarden on next access
+ * Retrieve a single secret.
+ * Checks the 1-hour cache first. On cache miss, does a full sync.
+ * Falls back to process.env[key] in development if Vaultwarden is not set.
  */
+export async function getSecret(key: string): Promise<string> {
+  const cached = cache.get(key);
+  if (cached && cached.expiresAt > Date.now()) return cached.value;
+
+  // Dev fallback (no Vaultwarden configured locally)
+  if (!isConfigured()) {
+    const fallback = process.env[key];
+    if (fallback) return fallback;
+    throw new Error(
+      `[secrets] "${key}" not found. Configure Vaultwarden or set ${key} in .env.local`,
+    );
+  }
+
+  // Cache miss after 1 hr — re-sync to refresh all secrets at once
+  const all = await getAllSecrets();
+  if (key in all) return all[key];
+
+  // Last resort: direct env fallback in development
+  if (process.env.NODE_ENV === "development" && process.env[key]) {
+    return process.env[key]!;
+  }
+
+  throw new Error(`[secrets] "${key}" not found in Vaultwarden collection`);
+}
+
+/** Clear in-memory cache — forces re-fetch from Vaultwarden on next access. */
 export function clearSecretCache(): void {
-  if (secretsManager) {
-    secretsManager.clearCache();
-  }
-}
-
-/**
- * Disconnect from Vaultwarden
- * Clears the client instance and cache
- */
-export function disconnectSecrets(): void {
-  if (secretsManager) {
-    secretsManager.disconnect();
-    secretsManager.clearCache();
-    secretsManager = null;
-  }
+  cache.clear();
 }
