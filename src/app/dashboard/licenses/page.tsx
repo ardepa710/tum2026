@@ -1,9 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { CreditCard } from "lucide-react";
 import { LicenseDashboard } from "@/components/license-dashboard";
+import { getAccessibleTenantIds } from "@/lib/tenant-auth";
 
 export default async function LicensesPage() {
+  const accessibleIds = await getAccessibleTenantIds();
   const tenants = await prisma.tenant.findMany({
+    where: { id: { in: accessibleIds } },
     select: { id: true, tenantAbbrv: true },
     orderBy: { tenantAbbrv: "asc" },
   });

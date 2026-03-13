@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getSessionRole, hasMinRole } from "@/lib/rbac";
+import { getAccessibleTenantIds } from "@/lib/tenant-auth";
 import { calculateHealthScore } from "@/lib/health-score";
 import { HealthBadge } from "@/components/health-badge";
 import {
@@ -14,8 +15,12 @@ import {
 } from "lucide-react";
 
 export default async function TenantsPage() {
-  const role = await getSessionRole();
+  const [role, accessibleIds] = await Promise.all([
+    getSessionRole(),
+    getAccessibleTenantIds(),
+  ]);
   const tenants = await prisma.tenant.findMany({
+    where: { id: { in: accessibleIds } },
     include: {
       _count: {
         select: { automationTasks: true },

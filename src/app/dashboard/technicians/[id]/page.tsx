@@ -50,13 +50,14 @@ export default async function TechnicianDetailPage({
   });
 
   // Tenant assignments for this technician
-  const assignments = await prisma.techTenantAssignment.findMany({
-    where: { techEmail: technician.email },
-    include: {
-      tenant: { select: { tenantName: true, tenantAbbrv: true } },
-    },
-    orderBy: { tenant: { tenantAbbrv: "asc" } },
-  });
+  const assignments = (
+    await prisma.techTenantAssignment.findMany({
+      where: { techEmail: technician.email },
+      include: {
+        tenant: { select: { tenantName: true, tenantAbbrv: true } },
+      },
+    })
+  ).sort((a, b) => a.tenant.tenantAbbrv.localeCompare(b.tenant.tenantAbbrv));
 
   const assignedTenantIds = new Set(assignments.map((a) => a.tenantId));
 

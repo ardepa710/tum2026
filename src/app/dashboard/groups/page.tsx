@@ -1,8 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { TenantGroups } from "@/components/tenant-groups";
+import { getAccessibleTenantIds } from "@/lib/tenant-auth";
 
 export default async function GroupsPage() {
+  const accessibleIds = await getAccessibleTenantIds();
   const tenants = await prisma.tenant.findMany({
+    where: { id: { in: accessibleIds } },
     select: {
       id: true,
       tenantName: true,

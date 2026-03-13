@@ -8,14 +8,24 @@ import { logAudit, getActor } from "@/lib/audit";
 import { requireRole } from "@/lib/rbac";
 import { broadcastEvent } from "@/lib/sse";
 
-const SENTINEL_EDGE_TENANT_ID = 10;
-const TUM_APP_GROUP_NAME = "TUM APP";
-
 export async function syncTechnicians() {
   await requireRole("ADMIN");
   const actor = await getActor();
+
+  const rawTenantId = process.env.TECHNICIAN_SYNC_TENANT_ID;
+  const SENTINEL_EDGE_TENANT_ID = rawTenantId ? Number(rawTenantId) : 10;
+  const TUM_APP_GROUP_NAME =
+    process.env.TECHNICIAN_SYNC_GROUP_NAME?.trim() || "TUM APP";
+
+  if (!Number.isInteger(SENTINEL_EDGE_TENANT_ID) || SENTINEL_EDGE_TENANT_ID <= 0) {
+    return {
+      success: false,
+      error: `TECHNICIAN_SYNC_TENANT_ID env var is invalid ("${rawTenantId}"). Must be a positive integer matching the DB tenant row ID.`,
+    };
+  }
+
   try {
-    // 1. Fetch all groups and find "TUM APP"
+    // 1. Fetch all groups and find the configured group name
     const groups = await getGroups(SENTINEL_EDGE_TENANT_ID);
     const tumGroup = groups.find(
       (g: { displayName?: string }) =>

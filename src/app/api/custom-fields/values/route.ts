@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { requireTenantAccess } from "@/lib/tenant-auth";
 
 const ALLOWED_ENTITY_TYPES = ["tenant", "task"];
 
@@ -15,6 +16,12 @@ export async function GET(req: NextRequest) {
 
   if (!ALLOWED_ENTITY_TYPES.includes(entityType)) {
     return NextResponse.json({ error: "Invalid entity type" }, { status: 400 });
+  }
+
+  // M-03: enforce tenant ownership for tenant-scoped reads
+  if (entityType === "tenant") {
+    const deny = await requireTenantAccess(Number(entityId));
+    if (deny) return deny;
   }
 
   const fields = await prisma.customField.findMany({
@@ -64,6 +71,12 @@ export async function PUT(req: NextRequest) {
 
   if (value.length > 10000) {
     return NextResponse.json({ error: "Value too long (max 10000 chars)" }, { status: 400 });
+  }
+
+  // M-03: enforce tenant ownership for tenant-scoped writes
+  if (entityType === "tenant") {
+    const deny = await requireTenantAccess(Number(entityId));
+    if (deny) return deny;
   }
 
   // Fetch field definition

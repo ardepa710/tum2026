@@ -1,10 +1,15 @@
 import { prisma } from "@/lib/prisma";
 import { TenantUsers } from "@/components/tenant-users";
 import { getSessionRole } from "@/lib/rbac";
+import { getAccessibleTenantIds } from "@/lib/tenant-auth";
 
 export default async function UsersPage() {
-  const role = await getSessionRole();
+  const [role, accessibleIds] = await Promise.all([
+    getSessionRole(),
+    getAccessibleTenantIds(),
+  ]);
   const tenants = await prisma.tenant.findMany({
+    where: { id: { in: accessibleIds } },
     select: {
       id: true,
       tenantName: true,
