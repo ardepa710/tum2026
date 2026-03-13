@@ -1,13 +1,13 @@
-import { getSessionRole } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
+import { getAccessibleTenantIds } from "@/lib/tenant-auth";
 import { SophosGroupsList } from "@/components/sophos-groups-list";
 import { FolderTree } from "lucide-react";
 
 export default async function SophosGroupsPage() {
-  await getSessionRole();
+  const accessibleIds = await getAccessibleTenantIds();
 
   const tenants = await prisma.tenant.findMany({
-    where: { sophosOrgId: { not: null } },
+    where: { sophosOrgId: { not: null }, id: { in: accessibleIds } },
     select: { id: true, tenantAbbrv: true, sophosOrgId: true },
     orderBy: { tenantName: "asc" },
   });

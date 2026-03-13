@@ -1,5 +1,6 @@
 import { getSessionRole } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
+import { getAccessibleTenantIds } from "@/lib/tenant-auth";
 import { getSophosHealthCheck } from "@/lib/sophos";
 import { SophosTenantCard } from "@/components/sophos-tenant-card";
 import { SophosEndpointTable } from "@/components/sophos-endpoint-table";
@@ -18,6 +19,9 @@ export default async function SophosTenantDetailPage({
   const tenantId = Number(tenantIdRaw);
 
   if (isNaN(tenantId)) notFound();
+
+  const accessibleIds = await getAccessibleTenantIds();
+  if (!accessibleIds.includes(tenantId)) notFound();
 
   const tenant = await prisma.tenant.findUnique({
     where: { id: tenantId },

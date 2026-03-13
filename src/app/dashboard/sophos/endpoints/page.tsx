@@ -1,13 +1,17 @@
 import { getSessionRole } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
+import { getAccessibleTenantIds } from "@/lib/tenant-auth";
 import { SophosEndpointTable } from "@/components/sophos-endpoint-table";
 import { Shield } from "lucide-react";
 
 export default async function SophosEndpointsPage() {
-  const role = await getSessionRole();
+  const [role, accessibleIds] = await Promise.all([
+    getSessionRole(),
+    getAccessibleTenantIds(),
+  ]);
 
   const tenants = await prisma.tenant.findMany({
-    where: { sophosOrgId: { not: null } },
+    where: { sophosOrgId: { not: null }, id: { in: accessibleIds } },
     select: { id: true, tenantAbbrv: true, sophosOrgId: true },
     orderBy: { tenantName: "asc" },
   });

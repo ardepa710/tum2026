@@ -1,5 +1,6 @@
 import { requireRole } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
+import { getAccessibleTenantIds } from "@/lib/tenant-auth";
 import { getNinjaOrganizations } from "@/lib/ninja";
 import { NinjaOrgCard } from "@/components/ninja-org-card";
 import { Building2, AlertTriangle } from "lucide-react";
@@ -7,6 +8,8 @@ import type { NinjaOrganization } from "@/lib/types/ninja";
 
 export default async function RmmTenantsPage() {
   await requireRole("VIEWER");
+
+  const accessibleIds = await getAccessibleTenantIds();
 
   // Fetch NinjaOne organizations
   let orgs: NinjaOrganization[] = [];
@@ -21,9 +24,9 @@ export default async function RmmTenantsPage() {
         : "Failed to connect to NinjaOne API.";
   }
 
-  // Fetch tenants that have a ninjaOrgId to determine which orgs are linked
+  // Fetch only the accessible tenants that have a ninjaOrgId
   const linkedTenants = await prisma.tenant.findMany({
-    where: { ninjaOrgId: { not: null } },
+    where: { ninjaOrgId: { not: null }, id: { in: accessibleIds } },
     select: {
       ninjaOrgId: true,
       tenantName: true,
@@ -38,6 +41,10 @@ export default async function RmmTenantsPage() {
       { tenantName: t.tenantName, tenantAbbrv: t.tenantAbbrv },
     ]),
   );
+
+  // Only show NinjaOne orgs that are linked to accessible tenants
+  const accessibleNinjaOrgIds = new Set(linkedTenants.map((t) => t.ninjaOrgId!));
+  orgs = orgs.filter((org) => accessibleNinjaOrgIds.has(org.id));
 
   return (
     <div>

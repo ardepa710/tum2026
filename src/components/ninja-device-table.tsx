@@ -20,7 +20,13 @@ import { nodeClassColor, nodeClassLabel, formatNinjaTime } from "@/lib/ninja-uti
 // Component
 // ---------------------------------------------------------------------------
 
-export function NinjaDeviceTable() {
+interface NinjaDeviceTableProps {
+  /** NinjaOne organizationIds the current user may see. Empty = no access. */
+  allowedOrgIds: number[];
+}
+
+export function NinjaDeviceTable({ allowedOrgIds }: NinjaDeviceTableProps) {
+  const allowedSet = new Set(allowedOrgIds);
   const [devices, setDevices] = useState<NinjaDevice[]>([]);
   const [organizations, setOrganizations] = useState<NinjaOrganization[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,19 +44,22 @@ export function NinjaDeviceTable() {
 
   const PAGE_SIZE = 200;
 
-  // Fetch organizations on mount
+  // Fetch organizations on mount — restrict to accessible orgs
   useEffect(() => {
     fetch("/api/ninja/organizations")
       .then((res) => res.json())
       .then((data) => {
-        if (Array.isArray(data)) setOrganizations(data);
+        if (Array.isArray(data)) {
+          setOrganizations(data.filter((o: NinjaOrganization) => allowedSet.has(o.id)));
+        }
       })
       .catch(() => {
         // Non-critical — org filter just won't have names
       });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Fetch devices on mount
+  // Fetch devices on mount — filter to accessible orgs after fetch
   useEffect(() => {
     setLoading(true);
     setError(null);
@@ -61,7 +70,8 @@ export function NinjaDeviceTable() {
       })
       .then((data) => {
         if (Array.isArray(data)) {
-          setDevices(data);
+          const allowed = data.filter((d: NinjaDevice) => allowedSet.has(d.organizationId));
+          setDevices(allowed);
           setHasMore(data.length > 0);
         } else {
           setDevices([]);
@@ -72,6 +82,7 @@ export function NinjaDeviceTable() {
         setError(err instanceof Error ? err.message : "Failed to fetch devices");
       })
       .finally(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Load more (cursor-based pagination) — fetches one page
@@ -86,7 +97,8 @@ export function NinjaDeviceTable() {
       })
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) {
-          setDevices((prev) => [...prev, ...data]);
+          const allowed = data.filter((d: NinjaDevice) => allowedSet.has(d.organizationId));
+          setDevices((prev) => [...prev, ...allowed]);
           setHasMore(true);
         } else {
           setHasMore(false);
@@ -96,7 +108,7 @@ export function NinjaDeviceTable() {
         setHasMore(false);
       })
       .finally(() => setLoadingMore(false));
-  }, [devices, hasMore, loadingMore]);
+  }, [devices, hasMore, loadingMore]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load ALL remaining devices via auto-pagination
   const loadAll = useCallback(async () => {
@@ -115,7 +127,8 @@ export function NinjaDeviceTable() {
         if (!res.ok) break;
         const data = await res.json();
         if (Array.isArray(data) && data.length > 0) {
-          allDevices = [...allDevices, ...data];
+          const allowed = data.filter((d: NinjaDevice) => allowedSet.has(d.organizationId));
+          allDevices = [...allDevices, ...allowed];
         } else {
           keepGoing = false;
         }
@@ -127,7 +140,7 @@ export function NinjaDeviceTable() {
     setDevices(allDevices);
     setHasMore(false);
     setLoadingMore(false);
-  }, [devices, hasMore, loadingMore]);
+  }, [devices, hasMore, loadingMore]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Build org lookup
   const orgMap = new Map(organizations.map((o) => [o.id, o.name]));
