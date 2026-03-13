@@ -16,6 +16,7 @@ import {
   Building2,
   FolderOpen,
   Monitor,
+  Braces,
 } from "lucide-react";
 
 type MasterTaskData = {
@@ -30,6 +31,7 @@ type MasterTaskData = {
   tenantExclusive: string | null;
   taskGroup: string | null;
   systemMgr: string | null;
+  additionalDataSchema: string | null;
 } | null;
 
 export function MasterTaskForm({ task }: { task?: MasterTaskData }) {
@@ -265,6 +267,38 @@ export function MasterTaskForm({ task }: { task?: MasterTaskData }) {
           placeholder="e.g. Microsoft 365"
           className={inputClass}
         />
+      </div>
+
+      {/* Webhook Data */}
+      <div className="border-t border-[var(--border)] pt-5">
+        <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-1">
+          Webhook Data
+        </h3>
+        <p className="text-xs text-[var(--text-muted)] mb-4">
+          JSON array defining the <code className="bg-[var(--bg-hover)] px-1 rounded">additional_data</code> fields sent in the webhook payload. Leave blank if this task requires no extra inputs.
+        </p>
+      </div>
+
+      <div>
+        <label
+          htmlFor="additionalDataSchema"
+          className="flex items-center gap-2 text-sm font-medium text-[var(--text-primary)] mb-2"
+        >
+          <Braces className="w-4 h-4 text-[var(--text-muted)]" />
+          Additional Data Schema (JSON)
+        </label>
+        <textarea
+          id="additionalDataSchema"
+          name="additionalDataSchema"
+          rows={6}
+          defaultValue={task?.additionalDataSchema ?? ""}
+          placeholder={'[\n  {"name": "ou_path", "label": "OU Path", "type": "text", "required": true}\n]'}
+          className={`${inputClass} resize-y font-mono text-xs`}
+          spellCheck={false}
+        />
+        <p className="text-xs text-[var(--text-muted)] mt-1.5">
+          Supported types: <code className="bg-[var(--bg-hover)] px-1 rounded">text</code>, <code className="bg-[var(--bg-hover)] px-1 rounded">textarea</code>, <code className="bg-[var(--bg-hover)] px-1 rounded">select</code>, <code className="bg-[var(--bg-hover)] px-1 rounded">number</code>, <code className="bg-[var(--bg-hover)] px-1 rounded">checkbox</code>
+        </p>
       </div>
 
       {/* Submit */}

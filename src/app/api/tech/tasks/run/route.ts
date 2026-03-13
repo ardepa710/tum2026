@@ -134,6 +134,7 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         ticket_number: ticketNumber ?? 0,
         tech_email: session.user.email,
+        tenant_id: tenantId,
         username: targetUser,
         additional_data: additionalData ?? {},
         task_code: task.taskCode,

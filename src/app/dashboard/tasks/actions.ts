@@ -23,9 +23,18 @@ export async function createMasterTask(
     (formData.get("tenantExclusive") as string)?.trim() || null;
   const taskGroup = (formData.get("taskGroup") as string)?.trim() || null;
   const systemMgr = (formData.get("systemMgr") as string)?.trim() || null;
+  const additionalDataSchemaRaw = (formData.get("additionalDataSchema") as string)?.trim() || null;
 
   if (!taskName) return { error: "Task Name is required." };
   if (!taskCode) return { error: "Task Code is required." };
+
+  // Validate JSON schema if provided
+  if (additionalDataSchemaRaw) {
+    try { JSON.parse(additionalDataSchemaRaw); } catch {
+      return { error: "Webhook Data must be valid JSON." };
+    }
+  }
+  const additionalDataSchema = additionalDataSchemaRaw;
 
   let newTask;
   try {
@@ -41,6 +50,7 @@ export async function createMasterTask(
         tenantExclusive,
         taskGroup,
         systemMgr,
+        additionalDataSchema,
       },
     });
   } catch {
@@ -70,9 +80,17 @@ export async function updateMasterTask(
     (formData.get("tenantExclusive") as string)?.trim() || null;
   const taskGroup = (formData.get("taskGroup") as string)?.trim() || null;
   const systemMgr = (formData.get("systemMgr") as string)?.trim() || null;
+  const additionalDataSchemaRaw = (formData.get("additionalDataSchema") as string)?.trim() || null;
 
   if (!taskName) return { error: "Task Name is required." };
   if (!taskCode) return { error: "Task Code is required." };
+
+  if (additionalDataSchemaRaw) {
+    try { JSON.parse(additionalDataSchemaRaw); } catch {
+      return { error: "Webhook Data must be valid JSON." };
+    }
+  }
+  const additionalDataSchema = additionalDataSchemaRaw;
 
   try {
     await prisma.masterTask.update({
@@ -88,6 +106,7 @@ export async function updateMasterTask(
         tenantExclusive,
         taskGroup,
         systemMgr,
+        additionalDataSchema,
       },
     });
   } catch {

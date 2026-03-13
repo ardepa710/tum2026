@@ -18,6 +18,7 @@ import {
   Monitor,
   Pencil,
   ArrowLeft,
+  Braces,
 } from "lucide-react";
 
 export default async function TaskDetailPage({
@@ -241,6 +242,27 @@ export default async function TaskDetailPage({
           </div>
         </div>
       </div>
+
+      {/* Webhook Data */}
+      {task.additionalDataSchema && (
+        <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-5 mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <Braces className="w-5 h-5" style={{ color: "var(--accent)" }} />
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+              Webhook Data
+            </h3>
+          </div>
+          <pre className="text-xs text-[var(--text-secondary)] bg-[var(--bg-primary)] border border-[var(--border)] rounded-lg p-4 overflow-x-auto whitespace-pre-wrap break-words font-mono">
+            {(() => {
+              try {
+                return JSON.stringify(JSON.parse(task.additionalDataSchema), null, 2);
+              } catch {
+                return task.additionalDataSchema;
+              }
+            })()}
+          </pre>
+        </div>
+      )}
 
       {/* Custom Fields */}
       <div className="mb-6">
