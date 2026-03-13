@@ -138,9 +138,10 @@ model MasterTask {
   syncRequired     Boolean @default(false) @map("sync_required")
   rewstWebhook     String? @map("rewst_webhook")
   tenantExclusive  String? @map("tenant_exclusive")
-  taskGroup        String? @map("task_group")
-  systemMgr        String?          @map("system_mgr")
-  taskPermissions  TaskPermission[]
+  taskGroup            String? @map("task_group")
+  systemMgr            String? @map("system_mgr")
+  additionalDataSchema String? @map("additional_data_schema") @db.Text
+  taskPermissions      TaskPermission[]
   taskRuns         TaskRun[]
   runbooks         Runbook[]
 

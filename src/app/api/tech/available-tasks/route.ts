@@ -45,6 +45,8 @@ export async function GET() {
       syncRequired: t.syncRequired,
       rewstWebhook: t.rewstWebhook,
       tenantExclusive: t.tenantExclusive,
+      taskGroup: t.taskGroup,
+      additionalDataSchema: t.additionalDataSchema,
     }))
   );
 }

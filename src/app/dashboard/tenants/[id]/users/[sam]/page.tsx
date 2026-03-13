@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { AdUserActions } from "@/components/ad/AdUserActions";
+import { RunTaskForm } from "@/components/tasks/RunTaskForm";
 import {
   getUserDetail,
   getUserMemberOf,
@@ -146,6 +147,11 @@ export default async function UserDetailPage({
             />
           </div>
         </div>
+      </div>
+
+      {/* Run Task */}
+      <div className="mb-5">
+        <RunTaskForm targetUser={adUser.samAccountName} tenantId={tenantId} />
       </div>
 
       {/* Two-column detail grid */}
