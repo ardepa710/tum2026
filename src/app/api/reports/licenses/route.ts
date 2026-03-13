@@ -1,12 +1,15 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getLicenses } from "@/lib/graph";
+import { getAccessibleTenantIds } from "@/lib/tenant-auth";
 
 export async function GET() {
   const session = await auth();
   if (!session) return new Response("Unauthorized", { status: 401 });
 
+  const accessibleIds = await getAccessibleTenantIds();
   const tenants = await prisma.tenant.findMany({
+    where: { id: { in: accessibleIds } },
     select: { id: true, tenantAbbrv: true },
   });
 

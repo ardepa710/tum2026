@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getNinjaOrgDevices } from "@/lib/ninja";
 import { getSophosEndpoints } from "@/lib/sophos";
 import type { SophosEndpoint } from "@/lib/types/sophos";
+import { requireTenantAccess } from "@/lib/tenant-auth";
 
 export async function POST(request: NextRequest) {
   const session = await auth();
@@ -25,6 +26,9 @@ export async function POST(request: NextRequest) {
       { status: 400 },
     );
   }
+
+  const deny = await requireTenantAccess(tenantId);
+  if (deny) return deny;
 
   // Fetch tenant to get both integration IDs
   const tenant = await prisma.tenant.findUnique({

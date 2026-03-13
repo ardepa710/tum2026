@@ -10,6 +10,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireTenantAccess } from "@/lib/tenant-auth";
+import { getSessionRole, hasMinRole } from "@/lib/rbac";
 import { executePowerShell } from "@/lib/sentinel-agent";
 import {
   psDisableUser,
@@ -36,6 +38,9 @@ export async function GET(
     return NextResponse.json({ error: "Invalid tenant ID" }, { status: 400 });
   }
 
+  const deny = await requireTenantAccess(tenantId);
+  if (deny) return deny;
+
   const user = await prisma.adUser.findUnique({
     where: { tenantId_samAccountName: { tenantId, samAccountName: decodeURIComponent(sam) } },
   });
@@ -56,11 +61,19 @@ export async function POST(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const role = await getSessionRole();
+  if (!hasMinRole(role, "EDITOR")) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const { id, sam } = await params;
   const tenantId = Number(id);
   if (isNaN(tenantId)) {
     return NextResponse.json({ error: "Invalid tenant ID" }, { status: 400 });
   }
+
+  const deny = await requireTenantAccess(tenantId);
+  if (deny) return deny;
 
   const body = await req.json().catch(() => ({}));
   const action = body.action as AdUserAction | undefined;

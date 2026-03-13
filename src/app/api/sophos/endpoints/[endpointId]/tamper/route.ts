@@ -6,6 +6,7 @@ import {
   getSophosEndpointTamper,
   setSophosEndpointTamper,
 } from "@/lib/sophos";
+import { requireTenantAccess } from "@/lib/tenant-auth";
 
 export async function GET(
   request: NextRequest,
@@ -33,6 +34,9 @@ export async function GET(
       { status: 400 },
     );
   }
+
+  const denyGet = await requireTenantAccess(tenantId);
+  if (denyGet) return denyGet;
 
   try {
     const data = await getSophosEndpointTamper(tenantId, endpointId);
@@ -81,6 +85,9 @@ export async function POST(
       { status: 400 },
     );
   }
+
+  const denyPost = await requireTenantAccess(tenantId);
+  if (denyPost) return denyPost;
 
   try {
     const body = await request.json();

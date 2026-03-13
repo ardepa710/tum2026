@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { requireRole } from "@/lib/rbac";
 import { DeleteTechnicianButton } from "@/components/delete-technician-button";
 import { BookmarkButton } from "@/components/bookmark-button";
+import { TechTenantManager } from "@/components/tech-tenant-manager";
 import {
   UserRound,
   Mail,
@@ -20,6 +22,8 @@ export default async function TechnicianDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireRole("ADMIN");
+
   const { id } = await params;
   const techId = Number(id);
   if (isNaN(techId)) notFound();
@@ -30,7 +34,7 @@ export default async function TechnicianDetailPage({
 
   if (!technician) notFound();
 
-  // Get permissions linked by email
+  // Permissions linked by email
   const permissions = await prisma.techPermission.findMany({
     where: { techEmail: technician.email },
     include: {
@@ -44,6 +48,24 @@ export default async function TechnicianDetailPage({
     },
     orderBy: { permission: { permissionCode: "asc" } },
   });
+
+  // Tenant assignments for this technician
+  const assignments = await prisma.techTenantAssignment.findMany({
+    where: { techEmail: technician.email },
+    include: {
+      tenant: { select: { tenantName: true, tenantAbbrv: true } },
+    },
+    orderBy: { tenant: { tenantAbbrv: "asc" } },
+  });
+
+  const assignedTenantIds = new Set(assignments.map((a) => a.tenantId));
+
+  // All tenants not yet assigned (for the "Add" dropdown)
+  const allTenants = await prisma.tenant.findMany({
+    select: { id: true, tenantName: true, tenantAbbrv: true },
+    orderBy: { tenantAbbrv: "asc" },
+  });
+  const availableTenants = allTenants.filter((t) => !assignedTenantIds.has(t.id));
 
   return (
     <div>
@@ -160,55 +182,66 @@ export default async function TechnicianDetailPage({
         </div>
       </div>
 
-      {/* Permissions */}
-      <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <ShieldCheck
-            className="w-5 h-5"
-            style={{ color: "var(--accent)" }}
-          />
-          <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-            Permissions
-          </h3>
-          <span className="text-xs text-[var(--text-muted)] bg-[var(--bg-hover)] px-1.5 py-0.5 rounded-full">
-            {permissions.length}
-          </span>
-        </div>
+      {/* Tenant Access + Permissions — side by side on large screens */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Tenant Access */}
+        <TechTenantManager
+          technicianId={technician.id}
+          techEmail={technician.email}
+          assignments={assignments}
+          availableTenants={availableTenants}
+        />
 
-        {permissions.length === 0 ? (
-          <p className="text-sm text-[var(--text-muted)]">
-            No permissions assigned. Visit{" "}
-            <Link
-              href="/dashboard/permissions"
-              className="text-[var(--accent)] hover:underline"
-            >
+        {/* Permissions */}
+        <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <ShieldCheck
+              className="w-5 h-5"
+              style={{ color: "var(--accent)" }}
+            />
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">
               Permissions
-            </Link>{" "}
-            to assign permissions to this technician.
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {permissions.map((tp) => (
-              <Link
-                key={tp.id}
-                href={`/dashboard/permissions/${tp.permission.id}`}
-                className="flex items-center justify-between px-3 py-2 bg-[var(--bg-primary)] rounded-lg hover:bg-[var(--bg-hover)] transition-colors"
-              >
-                <div className="flex items-center gap-2">
-                  <Key className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-                  <span className="text-sm text-[var(--text-primary)] font-mono">
-                    {tp.permission.permissionCode}
-                  </span>
-                </div>
-                {tp.permission.permissionDescription && (
-                  <span className="text-xs text-[var(--text-muted)] max-w-[200px] truncate">
-                    {tp.permission.permissionDescription}
-                  </span>
-                )}
-              </Link>
-            ))}
+            </h3>
+            <span className="text-xs text-[var(--text-muted)] bg-[var(--bg-hover)] px-1.5 py-0.5 rounded-full">
+              {permissions.length}
+            </span>
           </div>
-        )}
+
+          {permissions.length === 0 ? (
+            <p className="text-sm text-[var(--text-muted)]">
+              No permissions assigned. Visit{" "}
+              <Link
+                href="/dashboard/permissions"
+                className="text-[var(--accent)] hover:underline"
+              >
+                Permissions
+              </Link>{" "}
+              to assign permissions to this technician.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {permissions.map((tp) => (
+                <Link
+                  key={tp.id}
+                  href={`/dashboard/permissions/${tp.permission.id}`}
+                  className="flex items-center justify-between px-3 py-2 bg-[var(--bg-primary)] rounded-lg hover:bg-[var(--bg-hover)] transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <Key className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+                    <span className="text-sm text-[var(--text-primary)] font-mono">
+                      {tp.permission.permissionCode}
+                    </span>
+                  </div>
+                  {tp.permission.permissionDescription && (
+                    <span className="text-xs text-[var(--text-muted)] max-w-[200px] truncate">
+                      {tp.permission.permissionDescription}
+                    </span>
+                  )}
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

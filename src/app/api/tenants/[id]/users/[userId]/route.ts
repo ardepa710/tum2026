@@ -9,6 +9,7 @@ import {
   getUserSignInActivity,
 } from "@/lib/graph";
 import type { UserDetailResponse } from "@/lib/types/user-detail";
+import { requireTenantAccess } from "@/lib/tenant-auth";
 
 export async function GET(
   _request: NextRequest,
@@ -28,6 +29,9 @@ export async function GET(
   if (!userId) {
     return NextResponse.json({ error: "User ID required" }, { status: 400 });
   }
+
+  const deny = await requireTenantAccess(tenantId);
+  if (deny) return deny;
 
   try {
     const [userResult, memberOfResult, licensesResult, mailboxResult, managerResult, signInResult] =

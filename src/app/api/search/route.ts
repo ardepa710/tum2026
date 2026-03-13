@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getUsers } from "@/lib/graph";
+import { getAccessibleTenantIds } from "@/lib/tenant-auth";
 
 export async function GET(request: NextRequest) {
   const session = await auth();
@@ -10,7 +11,9 @@ export async function GET(request: NextRequest) {
   const q = request.nextUrl.searchParams.get("q")?.trim().toLowerCase();
   if (!q || q.length < 2) return NextResponse.json([]);
 
+  const accessibleIds = await getAccessibleTenantIds();
   const tenants = await prisma.tenant.findMany({
+    where: { id: { in: accessibleIds } },
     select: { id: true, tenantName: true, tenantAbbrv: true },
   });
 

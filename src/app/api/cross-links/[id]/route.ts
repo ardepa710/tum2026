@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireTenantAccess } from "@/lib/tenant-auth";
 
 export async function DELETE(
   _request: NextRequest,
@@ -18,6 +19,17 @@ export async function DELETE(
   }
 
   try {
+    // Fetch first to enforce tenant ownership check
+    const link = await prisma.deviceCrossLink.findUnique({
+      where: { id },
+      select: { tenantId: true },
+    });
+    if (!link) {
+      return NextResponse.json({ error: "Cross-link not found" }, { status: 404 });
+    }
+    const deny = await requireTenantAccess(link.tenantId);
+    if (deny) return deny;
+
     await prisma.deviceCrossLink.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (e) {

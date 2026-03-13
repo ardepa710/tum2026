@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { getActor, logAudit } from "@/lib/audit";
 import { getSessionRole, hasMinRole } from "@/lib/rbac";
 import { startSophosScan } from "@/lib/sophos";
+import { requireTenantAccess } from "@/lib/tenant-auth";
 
 export async function POST(
   request: NextRequest,
@@ -35,6 +36,9 @@ export async function POST(
       { status: 400 },
     );
   }
+
+  const deny = await requireTenantAccess(tenantId);
+  if (deny) return deny;
 
   try {
     await startSophosScan(tenantId, endpointId);

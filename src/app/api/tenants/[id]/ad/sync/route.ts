@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { fullSyncTenant } from "@/lib/ad-sync";
+import { requireTenantAccess } from "@/lib/tenant-auth";
 
 export async function POST(
   _req: NextRequest,
@@ -17,6 +18,9 @@ export async function POST(
   if (isNaN(tenantId)) {
     return NextResponse.json({ error: "Invalid tenant ID" }, { status: 400 });
   }
+
+  const deny = await requireTenantAccess(tenantId);
+  if (deny) return deny;
 
   const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
   if (!tenant) {
@@ -53,6 +57,9 @@ export async function GET(
   if (isNaN(tenantId)) {
     return NextResponse.json({ error: "Invalid tenant ID" }, { status: 400 });
   }
+
+  const deny = await requireTenantAccess(tenantId);
+  if (deny) return deny;
 
   const [tenant, userCount, groupCount] = await Promise.all([
     prisma.tenant.findUnique({

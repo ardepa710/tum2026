@@ -6,6 +6,7 @@ import {
   getGroupOwners,
 } from "@/lib/graph";
 import type { GroupDetailResponse } from "@/lib/types/group-detail";
+import { requireTenantAccess } from "@/lib/tenant-auth";
 
 export async function GET(
   _request: NextRequest,
@@ -25,6 +26,9 @@ export async function GET(
   if (!groupId) {
     return NextResponse.json({ error: "Group ID required" }, { status: 400 });
   }
+
+  const deny = await requireTenantAccess(tenantId);
+  if (deny) return deny;
 
   try {
     const [groupResult, membersResult, ownersResult] =

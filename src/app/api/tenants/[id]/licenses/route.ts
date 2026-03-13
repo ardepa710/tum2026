@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getLicenses } from "@/lib/graph";
+import { requireTenantAccess } from "@/lib/tenant-auth";
 
 export async function GET(
   _request: NextRequest,
@@ -16,6 +17,9 @@ export async function GET(
   if (isNaN(tenantId)) {
     return NextResponse.json({ error: "Invalid tenant ID" }, { status: 400 });
   }
+
+  const deny = await requireTenantAccess(tenantId);
+  if (deny) return deny;
 
   try {
     const licenses = await getLicenses(tenantId);

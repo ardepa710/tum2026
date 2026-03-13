@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireTenantAccess } from "@/lib/tenant-auth";
 
 export async function GET(request: NextRequest) {
   const session = await auth();
@@ -23,6 +24,9 @@ export async function GET(request: NextRequest) {
       { status: 400 },
     );
   }
+
+  const deny = await requireTenantAccess(tenantId);
+  if (deny) return deny;
 
   try {
     const crossLinks = await prisma.deviceCrossLink.findMany({
@@ -65,6 +69,9 @@ export async function POST(request: NextRequest) {
       { status: 400 },
     );
   }
+
+  const denyPost = await requireTenantAccess(tenantId);
+  if (denyPost) return denyPost;
 
   try {
     const crossLink = await prisma.deviceCrossLink.create({

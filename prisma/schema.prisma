@@ -100,14 +100,15 @@ model Tenant {
   adLastSyncAt  DateTime? @map("ad_last_sync_at")
   regDttm         DateTime         @default(now()) @map("reg_dttm")
   regUser         String           @map("reg_user")
-  automationTasks    AutomationTask[]
-  adUsers            AdUser[]
-  adGroups           AdGroup[]
-  adGroupMembers     AdGroupMember[]
-  taskRuns           TaskRun[]
-  securitySnapshots  SecuritySnapshot[]
-  deviceAssignments  DeviceAssignment[]
-  crossLinks         DeviceCrossLink[]
+  automationTasks       AutomationTask[]
+  adUsers               AdUser[]
+  adGroups              AdGroup[]
+  adGroupMembers        AdGroupMember[]
+  taskRuns              TaskRun[]
+  securitySnapshots     SecuritySnapshot[]
+  deviceAssignments     DeviceAssignment[]
+  crossLinks            DeviceCrossLink[]
+  techTenantAssignments TechTenantAssignment[]
 
   @@map("tenants")
 }
@@ -203,6 +204,22 @@ model Technician {
   createdAt      DateTime @default(now()) @map("created_at")
 
   @@map("tbmtechnicians")
+}
+
+/// Maps a technician (by email) to the tenants they are allowed to access.
+/// ADMIN/SUPERADMIN users bypass this table and have access to all tenants.
+/// Uses techEmail (not FK) so assignments survive Technician re-syncs.
+model TechTenantAssignment {
+  id         Int      @id @default(autoincrement())
+  techEmail  String   @map("tech_email")
+  tenantId   Int      @map("tenant_id")
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  assignedBy String   @map("assigned_by")
+  assignedAt DateTime @default(now()) @map("assigned_at")
+
+  @@unique([techEmail, tenantId])
+  @@index([techEmail])
+  @@map("tbmtech_tenants")
 }
 
 model AuditLog {

@@ -94,3 +94,45 @@ export async function deleteTechnician(id: number) {
   logAudit({ actor, action: "DELETE", entity: "TECHNICIAN", entityId: id, details: { displayName: tech?.displayName, email: tech?.email } });
   redirect("/dashboard/technicians");
 }
+
+// ─── Tenant Assignments ──────────────────────────────────────────────────────
+
+export async function assignTenantToTechnician(
+  _prevState: { error: string },
+  formData: FormData
+) {
+  await requireRole("ADMIN");
+  const actor = await getActor();
+
+  const techEmail = (formData.get("techEmail") as string)?.trim().toLowerCase();
+  const tenantId = Number(formData.get("tenantId"));
+
+  if (!techEmail) return { error: "Technician email is required." };
+  if (!tenantId || isNaN(tenantId)) return { error: "Tenant is required." };
+
+  try {
+    await prisma.techTenantAssignment.create({
+      data: { techEmail, tenantId, assignedBy: actor },
+    });
+  } catch {
+    return { error: "This technician already has access to that tenant." };
+  }
+
+  logAudit({ actor, action: "ASSIGN", entity: "TECH_TENANT", details: { techEmail, tenantId } });
+  revalidatePath("/dashboard/technicians");
+  return { error: "" };
+}
+
+export async function removeTenantFromTechnician(assignmentId: number, technicianId: number) {
+  await requireRole("ADMIN");
+  const actor = await getActor();
+
+  const assignment = await prisma.techTenantAssignment.findUnique({
+    where: { id: assignmentId },
+    select: { techEmail: true, tenantId: true },
+  });
+
+  await prisma.techTenantAssignment.delete({ where: { id: assignmentId } });
+  logAudit({ actor, action: "REMOVE", entity: "TECH_TENANT", entityId: assignmentId, details: { techEmail: assignment?.techEmail, tenantId: assignment?.tenantId } });
+  revalidatePath(`/dashboard/technicians/${technicianId}`);
+}

@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getSessionRole, hasMinRole } from "@/lib/rbac";
 
 function escapeCsvValue(value: string): string {
   if (value.includes(",") || value.includes('"') || value.includes("\n")) {
@@ -13,6 +14,11 @@ export async function GET(request: NextRequest) {
   const session = await auth();
   if (!session) {
     return new Response("Unauthorized", { status: 401 });
+  }
+
+  const role = await getSessionRole();
+  if (!hasMinRole(role, "ADMIN")) {
+    return new Response("Forbidden", { status: 403 });
   }
 
   const { searchParams } = request.nextUrl;

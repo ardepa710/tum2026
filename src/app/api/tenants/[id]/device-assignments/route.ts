@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireTenantAccess } from "@/lib/tenant-auth";
 
 export async function GET(
   request: NextRequest,
@@ -16,6 +17,9 @@ export async function GET(
   if (isNaN(tenantId)) {
     return NextResponse.json({ error: "Invalid tenant ID" }, { status: 400 });
   }
+
+  const deny = await requireTenantAccess(tenantId);
+  if (deny) return deny;
 
   const upn = request.nextUrl.searchParams.get("upn");
   if (!upn) {

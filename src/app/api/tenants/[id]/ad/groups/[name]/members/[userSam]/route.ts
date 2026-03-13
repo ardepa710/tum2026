@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireTenantAccess } from "@/lib/tenant-auth";
+import { getSessionRole, hasMinRole } from "@/lib/rbac";
 import { executePowerShell } from "@/lib/sentinel-agent";
 import { psRemoveGroupMember } from "@/lib/ad-scripts";
 import { syncSingleGroup, syncSingleUser } from "@/lib/ad-sync";
@@ -14,6 +16,11 @@ export async function DELETE(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const role = await getSessionRole();
+  if (!hasMinRole(role, "EDITOR")) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const { id, name, userSam } = await params;
   const tenantId = Number(id);
   const groupSam = decodeURIComponent(name);
@@ -22,6 +29,9 @@ export async function DELETE(
   if (isNaN(tenantId)) {
     return NextResponse.json({ error: "Invalid tenant ID" }, { status: 400 });
   }
+
+  const deny = await requireTenantAccess(tenantId);
+  if (deny) return deny;
 
   const tenant = await prisma.tenant.findUnique({
     where: { id: tenantId },
