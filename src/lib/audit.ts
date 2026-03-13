@@ -24,7 +24,5 @@ export function logAudit(params: {
         details: params.details ? JSON.stringify(params.details) : null,
       },
     })
-    .catch((err) => {
-      console.error("Audit log failed:", err);
-    });
+    .catch(() => {/* fire-and-forget */});
 }

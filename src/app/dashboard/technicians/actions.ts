@@ -82,7 +82,6 @@ export async function syncTechnicians() {
   } catch (error: unknown) {
     const msg =
       error instanceof Error ? error.message : "Failed to sync technicians.";
-    console.error("Technician sync error:", error);
     return { success: false, error: msg };
   }
 }

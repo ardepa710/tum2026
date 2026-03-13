@@ -64,7 +64,7 @@ class SecretsManager {
 
     this.authenticated = true;
 
-    console.log('[SECRETS] Successfully authenticated with Vaultwarden');
+    // authenticated
   }
 
   async getSecret(key: string): Promise<string> {
@@ -112,19 +112,14 @@ class SecretsManager {
         expiresAt: Date.now() + this.CACHE_TTL,
       });
 
-      console.log(`[SECRETS] Retrieved and cached secret: ${key}`);
+      // cached
 
       return secretValue;
     } catch (error) {
-      console.error(`[SECRETS] Failed to retrieve secret "${key}":`, error);
-
       // Fallback to env vars in development only
       if (process.env.NODE_ENV === 'development') {
         const fallback = process.env[key];
-        if (fallback) {
-          console.warn(`[SECRETS] Using fallback env var for ${key}`);
-          return fallback;
-        }
+        if (fallback) return fallback;
       }
 
       throw new Error(
@@ -159,16 +154,12 @@ class SecretsManager {
 
   clearCache(): void {
     this.cache.clear();
-    console.log('[SECRETS] Cache cleared');
   }
 
   disconnect(): void {
     if (this.client) {
-      // The SDK doesn't have an explicit disconnect method
-      // Just clear the reference
       this.client = null;
       this.authenticated = false;
-      console.log('[SECRETS] Disconnected from Vaultwarden');
     }
   }
 }

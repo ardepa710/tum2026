@@ -51,7 +51,5 @@ export function createNotification(params: {
       isRead: false,
       createdAt: created.createdAt.toISOString(),
     });
-  })().catch((err) => {
-    console.error("Notification creation failed:", err);
-  });
+  })().catch(() => {/* fire-and-forget */});
 }
