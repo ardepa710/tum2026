@@ -39,7 +39,7 @@ export async function GET(
 
   const members = memberRecords.length > 0
     ? await prisma.adUser.findMany({
-        where: { tenantId, upn: { in: memberRecords.map((m) => m.userUpn) } },
+        where: { tenantId, samAccountName: { in: memberRecords.map((m) => m.userSam) } },
         select: {
           id: true,
           displayName: true,

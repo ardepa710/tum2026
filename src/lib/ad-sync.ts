@@ -220,7 +220,7 @@ export async function fullSyncTenant(
           });
           if (!user) continue;
           await prisma.adGroupMember.create({
-            data: { tenantId, groupSam: group.samAccountName, userUpn: user.upn },
+            data: { tenantId, groupSam: group.samAccountName, userSam: user.samAccountName },
           });
           result.membershipsUpserted++;
         }

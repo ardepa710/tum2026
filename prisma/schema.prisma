@@ -436,12 +436,12 @@ model AdGroup {
 
 model AdGroupMember {
   groupSam String @map("group_sam")
-  userUpn  String @map("user_upn")
+  userSam  String @map("user_upn")
   tenantId Int    @map("tenant_id")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  @@id([tenantId, groupSam, userUpn])
+  @@id([tenantId, groupSam, userSam])
   @@index([tenantId, groupSam])
   @@map("tbmgroup_members_ad")
 }
