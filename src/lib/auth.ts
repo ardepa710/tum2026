@@ -1,8 +1,8 @@
 import NextAuth from "next-auth";
-import MicrosoftEntraId from "next-auth/providers/microsoft-entra-id";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
+import { authConfig } from "@/lib/auth.config";
 import type { Role } from "@/lib/rbac-shared";
 
 /**
@@ -66,19 +66,8 @@ async function syncTechPermissions(userId: string, email: string): Promise<Role>
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  ...authConfig,
   adapter: PrismaAdapter(prisma),
-  session: { strategy: "jwt" },
-  providers: [
-    MicrosoftEntraId({
-      clientId: process.env.AUTH_MICROSOFT_ENTRA_ID_ID!,
-      clientSecret: process.env.AUTH_MICROSOFT_ENTRA_ID_SECRET!,
-      issuer: `https://login.microsoftonline.com/${process.env.AUTH_MICROSOFT_ENTRA_ID_TENANT_ID}/v2.0`,
-    }),
-  ],
-  pages: {
-    signIn: "/login",
-    error: "/login",
-  },
   events: {
     async signIn({ user }) {
       logAudit({ actor: user.email ?? "unknown", action: "LOGIN", entity: "SESSION", entityId: user.id });
@@ -89,6 +78,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
   callbacks: {
+    // Use authConfig.session callback (copies id + role from token to session.user)
+    session: authConfig.callbacks!.session!,
+    // Full jwt callback: runs syncTechPermissions once at sign-in to derive role
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
@@ -99,13 +91,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
       }
       return token;
-    },
-    async session({ session, token }) {
-      if (session.user && token.id) {
-        session.user.id = token.id as string;
-        (session.user as unknown as Record<string, unknown>).role = token.role || "VIEWER";
-      }
-      return session;
     },
   },
 });

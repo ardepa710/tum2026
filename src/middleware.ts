@@ -1,28 +1,37 @@
+/**
+ * Auth.js v5 edge-safe middleware.
+ *
+ * Uses NextAuth(authConfig).auth to:
+ *   1. Cryptographically validate the JWT (AUTH_SECRET) — replaces the old
+ *      cookie-name-only check that could be bypassed with a forged cookie name.
+ *   2. Enforce role-based page access for known admin-only paths (canAccessPage).
+ *
+ * Auth.js v5 handles chunked cookies (.0 / .1 suffixes for large Microsoft JWTs)
+ * automatically, so no custom cookie parsing is needed here.
+ */
+import NextAuth from "next-auth";
+import { authConfig } from "@/lib/auth.config";
+import { canAccessPage, type Role } from "@/lib/rbac-shared";
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
 
-function hasSessionCookie(request: NextRequest): boolean {
-  // Auth.js v5 cookie names (plain + __Secure- prefix for HTTPS)
-  // Also check chunked variants (.0, .1, ...) used when JWT is large
-  const cookieNames = Array.from(request.cookies.getAll().map((c) => c.name));
-  return cookieNames.some(
-    (name) =>
-      name === "authjs.session-token" ||
-      name === "__Secure-authjs.session-token" ||
-      name.startsWith("authjs.session-token.") ||
-      name.startsWith("__Secure-authjs.session-token.")
-  );
-}
+const { auth } = NextAuth(authConfig);
 
-export function middleware(request: NextRequest) {
-  if (!hasSessionCookie(request)) {
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("callbackUrl", request.nextUrl.pathname);
+export default auth((req) => {
+  // No valid session → redirect to login
+  if (!req.auth?.user) {
+    const loginUrl = new URL("/login", req.url);
+    loginUrl.searchParams.set("callbackUrl", req.nextUrl.pathname);
     return NextResponse.redirect(loginUrl);
   }
 
+  // Enforce role-based page restrictions (e.g. /dashboard/permissions → ADMIN only)
+  const role = ((req.auth.user as Record<string, unknown>).role as Role) ?? "VIEWER";
+  if (!canAccessPage(role, req.nextUrl.pathname)) {
+    return NextResponse.redirect(new URL("/dashboard", req.url));
+  }
+
   return NextResponse.next();
-}
+});
 
 export const config = {
   matcher: ["/dashboard/:path*"],

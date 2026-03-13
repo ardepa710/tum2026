@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { hasMinRole, type Role } from "@/lib/rbac-shared";
 import { getActor, logAudit } from "@/lib/audit";
 import { setDeviceMaintenance, cancelDeviceMaintenance } from "@/lib/ninja";
 import { getTenantIdForNinjaDevice, requireTenantAccess } from "@/lib/tenant-auth";
@@ -13,8 +14,8 @@ export async function PUT(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const role = (session.user as Record<string, unknown>).role as string;
-  if (role !== "ADMIN" && role !== "EDITOR") {
+  const role = ((session.user as Record<string, unknown>).role as Role) ?? "VIEWER";
+  if (!hasMinRole(role, "EDITOR")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -67,8 +68,8 @@ export async function DELETE(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const role = (session.user as Record<string, unknown>).role as string;
-  if (role !== "ADMIN" && role !== "EDITOR") {
+  const role = ((session.user as Record<string, unknown>).role as Role) ?? "VIEWER";
+  if (!hasMinRole(role, "EDITOR")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
