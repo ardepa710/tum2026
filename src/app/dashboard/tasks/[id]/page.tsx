@@ -20,6 +20,7 @@ import {
   ArrowLeft,
   Braces,
 } from "lucide-react";
+import { JsonDisplay } from "@/components/json-display";
 
 export default async function TaskDetailPage({
   params,
@@ -253,13 +254,7 @@ export default async function TaskDetailPage({
             </h3>
           </div>
           <pre className="text-xs text-[var(--text-secondary)] bg-[var(--bg-primary)] border border-[var(--border)] rounded-lg p-4 overflow-x-auto whitespace-pre-wrap break-words font-mono">
-            {(() => {
-              try {
-                return JSON.stringify(JSON.parse(task.additionalDataSchema), null, 2);
-              } catch {
-                return task.additionalDataSchema;
-              }
-            })()}
+            <JsonDisplay value={task.additionalDataSchema} />
           </pre>
         </div>
       )}
