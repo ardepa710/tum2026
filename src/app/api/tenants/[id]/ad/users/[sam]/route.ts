@@ -75,6 +75,12 @@ export async function POST(
   const deny = await requireTenantAccess(tenantId);
   if (deny) return deny;
 
+  // NC-03: Validate SAM account name format before any PowerShell operation
+  const SAM_REGEX = /^[a-zA-Z0-9_\-\.]{1,20}$/;
+  if (!SAM_REGEX.test(sam)) {
+    return NextResponse.json({ error: "Invalid SAM account name format" }, { status: 400 });
+  }
+
   const body = await req.json().catch(() => ({}));
   const action = body.action as AdUserAction | undefined;
   if (!action || !["disable", "enable", "unlock", "reset-password"].includes(action)) {
@@ -86,6 +92,10 @@ export async function POST(
 
   if (action === "reset-password" && !body.password) {
     return NextResponse.json({ error: "Password is required for reset-password" }, { status: 400 });
+  }
+
+  if (action === "reset-password" && (typeof body.password !== "string" || body.password.length < 8)) {
+    return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 });
   }
 
   const tenant = await prisma.tenant.findUnique({

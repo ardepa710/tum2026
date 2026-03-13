@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { getTenantIdForNinjaDevice, requireTenantAccess } from "@/lib/tenant-auth";
 import {
   getNinjaDeviceOsPatches,
   getNinjaDeviceSoftwarePatches,
@@ -19,6 +20,13 @@ export async function GET(
   if (isNaN(deviceId)) {
     return NextResponse.json({ error: "Invalid device ID" }, { status: 400 });
   }
+
+  const tenantId = await getTenantIdForNinjaDevice(deviceId);
+  if (tenantId === null) {
+    return NextResponse.json({ error: "Device not found" }, { status: 404 });
+  }
+  const deny = await requireTenantAccess(tenantId);
+  if (deny) return deny;
 
   try {
     const [osPatchesResult, softwarePatchesResult] = await Promise.allSettled([

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireTenantAccess } from "@/lib/tenant-auth";
 
 export async function GET(
   request: NextRequest,
@@ -37,6 +38,12 @@ export async function GET(
     const tenant = await prisma.tenant.findFirst({
       where: { ninjaOrgId },
     });
+
+    // Require tenant access when a tenant is linked to this org
+    if (tenant) {
+      const deny = await requireTenantAccess(tenant.id);
+      if (deny) return deny;
+    }
 
     // Find existing assignment for this device
     const assignment = await prisma.deviceAssignment.findFirst({

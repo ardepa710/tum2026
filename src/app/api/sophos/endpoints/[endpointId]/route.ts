@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getSophosEndpoint } from "@/lib/sophos";
+import { requireTenantAccess } from "@/lib/tenant-auth";
 
 export async function GET(
   request: NextRequest,
@@ -28,6 +29,9 @@ export async function GET(
       { status: 400 },
     );
   }
+
+  const deny = await requireTenantAccess(tenantId);
+  if (deny) return deny;
 
   try {
     const data = await getSophosEndpoint(tenantId, endpointId);
