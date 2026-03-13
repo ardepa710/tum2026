@@ -23,7 +23,7 @@ export async function register() {
   // Edge runtime (middleware) cannot use the Bitwarden SDK — skip.
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
 
-  // Dynamic import keeps @bitwarden/sdk-napi out of the Edge bundle.
+  // Dynamic import keeps Node.js crypto out of the Edge bundle.
   const { getAllSecrets } = await import("@/lib/secrets");
 
   try {
