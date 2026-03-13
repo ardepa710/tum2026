@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getActor, logAudit } from "@/lib/audit";
 import { controlWindowsService } from "@/lib/ninja";
+import { getTenantIdForNinjaDevice, requireTenantAccess } from "@/lib/tenant-auth";
 
 export async function POST(
   request: NextRequest,
@@ -25,6 +26,13 @@ export async function POST(
   if (!serviceId) {
     return NextResponse.json({ error: "Invalid service ID" }, { status: 400 });
   }
+
+  const tenantId = await getTenantIdForNinjaDevice(deviceId);
+  if (tenantId === null) {
+    return NextResponse.json({ error: "Device not found" }, { status: 404 });
+  }
+  const deny = await requireTenantAccess(tenantId);
+  if (deny) return deny;
 
   try {
     const body = await request.json();

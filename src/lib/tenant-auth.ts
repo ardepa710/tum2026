@@ -46,6 +46,20 @@ export async function getAccessibleTenantIds(): Promise<number[]> {
 }
 
 /**
+ * Looks up the tenant ID for a given NinjaOne device ID via DeviceCrossLink.
+ * Returns null if the device is not linked to any tenant.
+ */
+export async function getTenantIdForNinjaDevice(
+  ninjaDeviceId: number
+): Promise<number | null> {
+  const link = await prisma.deviceCrossLink.findFirst({
+    where: { ninjaDeviceId },
+    select: { tenantId: true },
+  });
+  return link?.tenantId ?? null;
+}
+
+/**
  * Guards a route handler: verifies the current user has access to `tenantId`.
  *
  * Returns null if access is granted (proceed with the request).
