@@ -44,7 +44,13 @@ export function RunTaskForm({ targetUser, tenantId }: Props) {
   const parsedSchema: TaskFieldSchema[] = (() => {
     if (!selectedTask?.additionalDataSchema) return [];
     try {
-      return JSON.parse(selectedTask.additionalDataSchema) as TaskFieldSchema[];
+      const raw = JSON.parse(selectedTask.additionalDataSchema);
+      if (!Array.isArray(raw)) return [];
+      // Only keep items that have a valid name, label, and type
+      return (raw as TaskFieldSchema[]).filter(
+        (f) => f && typeof f.name === "string" && f.name.trim() !== "" &&
+               typeof f.label === "string" && typeof f.type === "string"
+      );
     } catch {
       return [];
     }

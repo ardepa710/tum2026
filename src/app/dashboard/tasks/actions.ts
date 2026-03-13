@@ -5,6 +5,34 @@ import { redirect } from "next/navigation";
 import { logAudit, getActor } from "@/lib/audit";
 import { requireRole } from "@/lib/rbac";
 
+function validateAdditionalDataSchema(raw: string): string | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return "Webhook Data must be valid JSON.";
+  }
+  if (!Array.isArray(parsed)) {
+    return "Webhook Data must be a JSON array, e.g. [{\"name\":\"field1\",\"label\":\"Field 1\",\"type\":\"text\"}].";
+  }
+  for (const item of parsed) {
+    if (typeof item !== "object" || item === null) {
+      return "Each item in Webhook Data must be an object.";
+    }
+    const { name, label, type } = item as Record<string, unknown>;
+    if (!name || typeof name !== "string") {
+      return `Each item must have a "name" string field (key used in additional_data).`;
+    }
+    if (!label || typeof label !== "string") {
+      return `Each item must have a "label" string field (display label in the form).`;
+    }
+    if (!type || typeof type !== "string") {
+      return `Each item must have a "type" field: "text", "textarea", "select", "number", or "checkbox".`;
+    }
+  }
+  return null;
+}
+
 export async function createMasterTask(
   _prevState: { error: string },
   formData: FormData
@@ -28,11 +56,9 @@ export async function createMasterTask(
   if (!taskName) return { error: "Task Name is required." };
   if (!taskCode) return { error: "Task Code is required." };
 
-  // Validate JSON schema if provided
   if (additionalDataSchemaRaw) {
-    try { JSON.parse(additionalDataSchemaRaw); } catch {
-      return { error: "Webhook Data must be valid JSON." };
-    }
+    const schemaError = validateAdditionalDataSchema(additionalDataSchemaRaw);
+    if (schemaError) return { error: schemaError };
   }
   const additionalDataSchema = additionalDataSchemaRaw;
 
@@ -86,9 +112,8 @@ export async function updateMasterTask(
   if (!taskCode) return { error: "Task Code is required." };
 
   if (additionalDataSchemaRaw) {
-    try { JSON.parse(additionalDataSchemaRaw); } catch {
-      return { error: "Webhook Data must be valid JSON." };
-    }
+    const schemaError = validateAdditionalDataSchema(additionalDataSchemaRaw);
+    if (schemaError) return { error: schemaError };
   }
   const additionalDataSchema = additionalDataSchemaRaw;
 
