@@ -25,22 +25,6 @@ export default async function TenantGroupsPage({
     prisma.adGroup.findMany({
       where: { tenantId },
       orderBy: { displayName: "asc" },
-      include: {
-        members: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                displayName: true,
-                samAccountName: true,
-                accountEnabled: true,
-              },
-            },
-          },
-          take: 5,
-        },
-        _count: { select: { members: true } },
-      },
     }),
   ]);
 
@@ -212,29 +196,14 @@ export default async function TenantGroupsPage({
                     </span>
                   </td>
                   <td className="px-5 py-3">
-                    <div className="flex flex-wrap gap-1">
-                      {group.members.slice(0, 3).map(({ user }) => (
-                        <span
-                          key={user.id}
-                          className={`text-xs px-1.5 py-0.5 rounded ${
-                            user.accountEnabled
-                              ? "bg-[var(--bg-hover)] text-[var(--text-secondary)]"
-                              : "bg-[var(--error)]/10 text-[var(--error)]"
-                          }`}
-                          title={user.samAccountName}
-                        >
-                          {user.displayName}
-                        </span>
-                      ))}
-                      {group._count.members > 3 && (
-                        <span className="text-xs text-[var(--text-muted)] px-1">
-                          +{group._count.members - 3} more
-                        </span>
-                      )}
-                      {group.memberCount === 0 && (
-                        <span className="text-xs text-[var(--warning)]">Empty group</span>
-                      )}
-                    </div>
+                    {group.memberCount === 0 ? (
+                      <span className="text-xs text-[var(--warning)]">Empty group</span>
+                    ) : (
+                      <span className="text-xs text-[var(--text-muted)] flex items-center gap-1">
+                        <Users className="w-3.5 h-3.5" />
+                        {group.memberCount} member{group.memberCount !== 1 ? "s" : ""}
+                      </span>
+                    )}
                   </td>
                 </tr>
               ))}

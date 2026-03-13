@@ -5,14 +5,11 @@ import { useRouter } from "next/navigation";
 import { UserPlus, Trash2, Loader2, Search, X } from "lucide-react";
 
 interface Member {
-  userId: number;
-  user: {
-    id: number;
-    displayName: string;
-    samAccountName: string;
-    department: string | null;
-    accountEnabled: boolean;
-  };
+  id: number;
+  displayName: string;
+  samAccountName: string;
+  department: string | null;
+  accountEnabled: boolean;
 }
 
 interface AdGroupMemberActionsProps {
@@ -35,10 +32,10 @@ export function AdGroupMemberActions({
 
   const filtered = search.trim()
     ? members.filter(
-        ({ user }) =>
-          user.displayName.toLowerCase().includes(search.toLowerCase()) ||
-          user.samAccountName.toLowerCase().includes(search.toLowerCase()) ||
-          (user.department ?? "").toLowerCase().includes(search.toLowerCase())
+        (m) =>
+          m.displayName.toLowerCase().includes(search.toLowerCase()) ||
+          m.samAccountName.toLowerCase().includes(search.toLowerCase()) ||
+          (m.department ?? "").toLowerCase().includes(search.toLowerCase())
       )
     : members;
 
@@ -119,27 +116,27 @@ export function AdGroupMemberActions({
             {search ? "No members match your filter" : "No members in this group"}
           </p>
         ) : (
-          filtered.map(({ user }) => (
+          filtered.map((m) => (
             <div
-              key={user.id}
+              key={m.samAccountName}
               className="flex items-center justify-between gap-3 py-2"
             >
               <div className="min-w-0">
-                <p className={`text-sm font-medium truncate ${user.accountEnabled ? "text-[var(--text-primary)]" : "text-[var(--error)]"}`}>
-                  {user.displayName}
+                <p className={`text-sm font-medium truncate ${m.accountEnabled ? "text-[var(--text-primary)]" : "text-[var(--error)]"}`}>
+                  {m.displayName}
                 </p>
-                <p className="text-xs text-[var(--text-muted)] font-mono">{user.samAccountName}</p>
-                {user.department && (
-                  <p className="text-xs text-[var(--text-muted)]">{user.department}</p>
+                <p className="text-xs text-[var(--text-muted)] font-mono">{m.samAccountName}</p>
+                {m.department && (
+                  <p className="text-xs text-[var(--text-muted)]">{m.department}</p>
                 )}
               </div>
               <button
-                onClick={() => handleRemove(user.samAccountName)}
-                disabled={removingId === user.samAccountName}
+                onClick={() => handleRemove(m.samAccountName)}
+                disabled={removingId === m.samAccountName}
                 className="shrink-0 p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--error)] hover:bg-[var(--error)]/10 transition-colors disabled:opacity-50"
-                title={`Remove ${user.samAccountName} from group`}
+                title={`Remove ${m.samAccountName} from group`}
               >
-                {removingId === user.samAccountName ? (
+                {removingId === m.samAccountName ? (
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 ) : (
                   <Trash2 className="w-3.5 h-3.5" />

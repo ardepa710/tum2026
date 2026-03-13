@@ -27,31 +27,33 @@ export async function GET(
 
   const group = await prisma.adGroup.findUnique({
     where: { tenantId_samAccountName: { tenantId, samAccountName } },
-    include: {
-      members: {
-        include: {
-          user: {
-            select: {
-              id: true,
-              displayName: true,
-              samAccountName: true,
-              mail: true,
-              upn: true,
-              jobTitle: true,
-              department: true,
-              accountEnabled: true,
-              lockedOut: true,
-            },
-          },
-        },
-        orderBy: { user: { displayName: "asc" } },
-      },
-    },
   });
 
   if (!group) {
     return NextResponse.json({ error: "Group not found" }, { status: 404 });
   }
 
-  return NextResponse.json(group);
+  const memberRecords = await prisma.adGroupMember.findMany({
+    where: { tenantId, groupSam: samAccountName },
+  });
+
+  const members = memberRecords.length > 0
+    ? await prisma.adUser.findMany({
+        where: { tenantId, upn: { in: memberRecords.map((m) => m.userUpn) } },
+        select: {
+          id: true,
+          displayName: true,
+          samAccountName: true,
+          mail: true,
+          upn: true,
+          jobTitle: true,
+          department: true,
+          accountEnabled: true,
+          lockedOut: true,
+        },
+        orderBy: { displayName: "asc" },
+      })
+    : [];
+
+  return NextResponse.json({ ...group, members });
 }

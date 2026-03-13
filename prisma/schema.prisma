@@ -103,6 +103,7 @@ model Tenant {
   automationTasks    AutomationTask[]
   adUsers            AdUser[]
   adGroups           AdGroup[]
+  adGroupMembers     AdGroupMember[]
   taskRuns           TaskRun[]
   securitySnapshots  SecuritySnapshot[]
   deviceAssignments  DeviceAssignment[]
@@ -408,8 +409,7 @@ model AdUser {
   createdInAd       DateTime? @map("created_in_ad")
   syncedAt          DateTime  @default(now()) @map("synced_at")
 
-  tenant  Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  groups  AdGroupMember[]
+  tenant  Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, samAccountName], name: "tenantId_samAccountName")
   @@index([tenantId])
@@ -427,8 +427,7 @@ model AdGroup {
   memberCount    Int       @default(0) @map("member_count")
   syncedAt       DateTime  @default(now()) @map("synced_at")
 
-  tenant  Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  members AdGroupMember[]
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, samAccountName], name: "tenantId_samAccountName")
   @@index([tenantId])
@@ -436,12 +435,13 @@ model AdGroup {
 }
 
 model AdGroupMember {
-  groupId Int @map("group_id")
-  userId  Int @map("user_id")
+  groupSam String @map("group_sam")
+  userUpn  String @map("user_upn")
+  tenantId Int    @map("tenant_id")
 
-  group AdGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  user  AdUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  @@id([groupId, userId])
+  @@id([tenantId, groupSam, userUpn])
+  @@index([tenantId, groupSam])
   @@map("tbmgroup_members_ad")
 }

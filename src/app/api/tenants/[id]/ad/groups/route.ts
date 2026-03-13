@@ -43,18 +43,6 @@ export async function GET(
       groupScope: true,
       memberCount: true,
       syncedAt: true,
-      members: {
-        select: {
-          user: {
-            select: {
-              id: true,
-              displayName: true,
-              samAccountName: true,
-              accountEnabled: true,
-            },
-          },
-        },
-      },
     },
   });
 

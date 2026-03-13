@@ -24,27 +24,27 @@ export default async function GroupDetailPage({
 
   const group = await prisma.adGroup.findUnique({
     where: { tenantId_samAccountName: { tenantId, samAccountName } },
-    include: {
-      members: {
-        include: {
-          user: {
-            select: {
-              id: true,
-              displayName: true,
-              samAccountName: true,
-              department: true,
-              accountEnabled: true,
-            },
-          },
-        },
-        orderBy: {
-          user: { displayName: "asc" },
-        },
-      },
-    },
   });
 
   if (!group) notFound();
+
+  const memberRecords = await prisma.adGroupMember.findMany({
+    where: { tenantId, groupSam: samAccountName },
+  });
+
+  const members = memberRecords.length > 0
+    ? await prisma.adUser.findMany({
+        where: { tenantId, upn: { in: memberRecords.map((m) => m.userUpn) } },
+        select: {
+          id: true,
+          displayName: true,
+          samAccountName: true,
+          department: true,
+          accountEnabled: true,
+        },
+        orderBy: { displayName: "asc" },
+      })
+    : [];
 
   const isSecurity = group.groupCategory === "Security";
 
@@ -145,16 +145,16 @@ export default async function GroupDetailPage({
           <div className="flex items-center gap-2 px-5 py-3.5 border-b border-[var(--border)] bg-[var(--bg-hover)]/40">
             <Users className="w-4 h-4 text-[var(--accent)]" />
             <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-              Members ({group.members.length})
+              Members ({members.length})
             </h3>
             <div className="ml-auto flex items-center gap-3 text-xs text-[var(--text-muted)]">
               <span className="flex items-center gap-1">
                 <CheckCircle2 className="w-3 h-3 text-[var(--success)]" />
-                {group.members.filter(({ user }) => user.accountEnabled).length} enabled
+                {members.filter((u) => u.accountEnabled).length} enabled
               </span>
               <span className="flex items-center gap-1">
                 <XCircle className="w-3 h-3 text-[var(--error)]" />
-                {group.members.filter(({ user }) => !user.accountEnabled).length} disabled
+                {members.filter((u) => !u.accountEnabled).length} disabled
               </span>
             </div>
           </div>
@@ -163,15 +163,12 @@ export default async function GroupDetailPage({
             <AdGroupMemberActions
               tenantId={tenantId}
               groupSam={group.samAccountName}
-              members={group.members.map(({ user }) => ({
-                userId: user.id,
-                user,
-              }))}
+              members={members}
             />
           </div>
 
           {/* Members table for larger groups — visible in members area */}
-          {group.members.length > 0 && (
+          {members.length > 0 && (
             <div className="border-t border-[var(--border)] overflow-x-auto">
               <table className="w-full">
                 <thead>
@@ -191,8 +188,8 @@ export default async function GroupDetailPage({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--border)]">
-                  {group.members.map(({ user }) => (
-                    <tr key={user.id} className="hover:bg-[var(--bg-hover)] transition-colors">
+                  {members.map((user) => (
+                    <tr key={user.samAccountName} className="hover:bg-[var(--bg-hover)] transition-colors">
                       <td className="px-4 py-2.5">
                         <Link
                           href={`/dashboard/tenants/${tenantId}/users/${encodeURIComponent(user.samAccountName)}`}

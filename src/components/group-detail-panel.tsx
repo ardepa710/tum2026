@@ -21,17 +21,15 @@ import { BookmarkButton } from "@/components/bookmark-button";
 /* ─── Types ─── */
 
 type ADMember = {
-  user: {
-    id: number;
-    displayName: string;
-    samAccountName: string;
-    mail: string | null;
-    upn: string;
-    jobTitle: string | null;
-    department: string | null;
-    accountEnabled: boolean;
-    lockedOut: boolean;
-  };
+  id: number;
+  displayName: string;
+  samAccountName: string;
+  mail: string | null;
+  upn: string;
+  jobTitle: string | null;
+  department: string | null;
+  accountEnabled: boolean;
+  lockedOut: boolean;
 };
 
 type ADGroupDetail = {
@@ -281,15 +279,15 @@ function MembersSection({ members }: { members: ADMember[] }) {
 
   const filteredMembers = filter
     ? members.filter(
-        ({ user }) =>
-          user.displayName.toLowerCase().includes(filter.toLowerCase()) ||
-          user.samAccountName.toLowerCase().includes(filter.toLowerCase()) ||
-          (user.mail || "").toLowerCase().includes(filter.toLowerCase()) ||
-          (user.department || "").toLowerCase().includes(filter.toLowerCase())
+        (m) =>
+          m.displayName.toLowerCase().includes(filter.toLowerCase()) ||
+          m.samAccountName.toLowerCase().includes(filter.toLowerCase()) ||
+          (m.mail || "").toLowerCase().includes(filter.toLowerCase()) ||
+          (m.department || "").toLowerCase().includes(filter.toLowerCase())
       )
     : members;
 
-  const enabledCount = members.filter(({ user }) => user.accountEnabled).length;
+  const enabledCount = members.filter((m) => m.accountEnabled).length;
   const disabledCount = members.length - enabledCount;
 
   return (
@@ -338,8 +336,8 @@ function MembersSection({ members }: { members: ADMember[] }) {
 
             {filteredMembers.length > 0 ? (
               <div className="space-y-0.5 max-h-80 overflow-y-auto">
-                {filteredMembers.map(({ user }) => (
-                  <MemberRow key={user.id} user={user} />
+                {filteredMembers.map((m) => (
+                  <MemberRow key={m.samAccountName} user={m} />
                 ))}
               </div>
             ) : (
@@ -354,7 +352,7 @@ function MembersSection({ members }: { members: ADMember[] }) {
   );
 }
 
-function MemberRow({ user }: { user: ADMember["user"] }) {
+function MemberRow({ user }: { user: ADMember }) {
   const initials = user.displayName
     .split(" ")
     .map((w) => w[0])

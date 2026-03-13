@@ -212,7 +212,7 @@ export async function fullSyncTenant(
         const psMembers = parseJsonArray<PsGroupMember>(membersResult.stdout);
 
         // Rebuild memberships — delete stale, insert current
-        await prisma.adGroupMember.deleteMany({ where: { groupId: group.id } });
+        await prisma.adGroupMember.deleteMany({ where: { tenantId, groupSam: group.samAccountName } });
 
         for (const m of psMembers) {
           const user = await prisma.adUser.findUnique({
@@ -220,7 +220,7 @@ export async function fullSyncTenant(
           });
           if (!user) continue;
           await prisma.adGroupMember.create({
-            data: { groupId: group.id, userId: user.id },
+            data: { tenantId, groupSam: group.samAccountName, userUpn: user.upn },
           });
           result.membershipsUpserted++;
         }
